@@ -1,0 +1,3 @@
+[submodule "deps/APIInterceptor"]
+	path = deps/APIInterceptor
+	url = git@github.com:kbiElude/APIInterceptor.git
