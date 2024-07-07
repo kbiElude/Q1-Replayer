@@ -1,3 +1,6 @@
 [submodule "deps/APIInterceptor"]
 	path = deps/APIInterceptor
 	url = git@github.com:kbiElude/APIInterceptor.git
+[submodule "deps/imgui"]
+	path = deps/imgui
+	url = https://github.com/ocornut/imgui.git
