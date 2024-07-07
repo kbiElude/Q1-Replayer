@@ -4,6 +4,7 @@
  */
 #include <memory>
 #include <thread>
+#include "replayer_window.h"
 
 /* Forward decls */
 class                             Replayer;
@@ -22,10 +23,8 @@ private:
     /* Private funcs */
     Replayer();
 
-    void execute();
-    bool init   ();
+    bool init();
 
     /* Private vars */
-    std::thread   m_worker_thread;
-    volatile bool m_worker_thread_must_die;
+    ReplayerWindowUniquePtr m_replayer_window_ptr;
 };

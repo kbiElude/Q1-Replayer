@@ -27,6 +27,8 @@ include_directories  ("${Launcher_SOURCE_DIR}/Replayer/include/")
 target_link_libraries(Launcher Detours)
 target_link_libraries(Replayer APIInterceptor glfw imgui)
 
+add_dependencies     (Launcher Replayer)
+
 source_group ("Launcher include files"   FILES ${LauncherIncludes})
 source_group ("Launcher source files"    FILES ${LauncherSources})
 source_group ("Replayer include files"   FILES ${ReplayerIncludes})
