@@ -3,8 +3,10 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  */
 #include "replayer_window.h"
+#include "Common/callbacks.h"
 #include "Common/logger.h"
 #include "glfw/glfw3.h"
+#include "glfw/glfw3native.h"
 #include "imgui/backends/imgui_impl_glfw.h"
 #include "imgui/backends/imgui_impl_opengl3.h"
 #include <assert.h>
@@ -17,8 +19,10 @@ static void glfw_error_callback(int         error,
     assert(false && "GLFW error callback received");
 }
 
-ReplayerWindow::ReplayerWindow()
-    :m_worker_thread_must_die(false)
+ReplayerWindow::ReplayerWindow(const std::array<uint32_t, 2>& in_extents)
+    :m_extents               (in_extents),
+     m_window_ptr            (nullptr),
+     m_worker_thread_must_die(false)
 {
     /* Stub */
 }
@@ -30,9 +34,9 @@ ReplayerWindow::~ReplayerWindow()
     m_worker_thread.join();
 }
 
-ReplayerWindowUniquePtr ReplayerWindow::create()
+ReplayerWindowUniquePtr ReplayerWindow::create(const std::array<uint32_t, 2>& in_extents)
 {
-    ReplayerWindowUniquePtr result_ptr(new ReplayerWindow() );
+    ReplayerWindowUniquePtr result_ptr(new ReplayerWindow(in_extents) );
 
     if (result_ptr != nullptr)
     {
@@ -55,9 +59,9 @@ bool ReplayerWindow::init()
 
 void ReplayerWindow::execute()
 {
-    int         result     = 1;
-    GLFWwindow* window_ptr = nullptr;
+    int result = 1;
 
+    APIInterceptor::disable_callbacks_for_this_thread            ();
     APIInterceptor::g_logger_ptr->disable_logging_for_this_thread();
 
     glfwSetErrorCallback(glfw_error_callback);
@@ -73,20 +77,20 @@ void ReplayerWindow::execute()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 
     // Create window with graphics context
-    window_ptr = glfwCreateWindow(1280,
-                                  720,
-                                  "Window",
+    m_window_ptr = glfwCreateWindow(m_extents.at(0),
+                                  m_extents.at(1),
+                                  "Q1 replayer",
                                   nullptr,  /* monitor */
                                   nullptr); /* share   */
 
-    if (window_ptr == nullptr)
+    if (m_window_ptr == nullptr)
     {
         assert(false);
 
         goto end;
     }
 
-    glfwMakeContextCurrent(window_ptr);
+    glfwMakeContextCurrent(m_window_ptr);
     glfwSwapInterval      (1); // Enable vsync
 
     // Setup Dear ImGui context
@@ -104,7 +108,7 @@ void ReplayerWindow::execute()
     ImGui::StyleColorsDark();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(window_ptr,
+    ImGui_ImplGlfw_InitForOpenGL(m_window_ptr,
                                  true); /* install_callbacks */
 
     #ifdef __EMSCRIPTEN__
@@ -116,7 +120,7 @@ void ReplayerWindow::execute()
     ImGui_ImplOpenGL3_Init("#version 100");
 
     // Main loop
-    while (!glfwWindowShouldClose(window_ptr) &&
+    while (!glfwWindowShouldClose(m_window_ptr) &&
            !m_worker_thread_must_die)
     {
         glfwPollEvents();
@@ -129,15 +133,15 @@ void ReplayerWindow::execute()
             int display_h = 0;
             int display_w = 0;
 
-            glfwGetFramebufferSize(window_ptr,
+            glfwGetFramebufferSize(m_window_ptr,
                                   &display_w,
                                   &display_h);
 
-            ImGui::Begin("Hello.", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+            ImGui::Begin("Hello.", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
             {
                 const auto window_size = ImGui::GetWindowSize();
 
-                ImGui::Text("Example message");
+                ImGui::Text("Press ___ to capture a frame for replay.");
 
                 ImGui::SetWindowPos(ImVec2( (display_w - window_size.x) / 2,
                                             (display_h - window_size.y) / 2) );
@@ -150,7 +154,7 @@ void ReplayerWindow::execute()
         }
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData() );
 
-        glfwSwapBuffers(window_ptr);
+        glfwSwapBuffers(m_window_ptr);
     }
 
     // Cleanup
@@ -158,9 +162,16 @@ void ReplayerWindow::execute()
     ImGui_ImplGlfw_Shutdown   ();
     ImGui::DestroyContext     ();
 
-    glfwDestroyWindow(window_ptr);
+    glfwDestroyWindow(m_window_ptr);
     glfwTerminate    ();
 
 end:
     ;
+}
+
+void ReplayerWindow::set_position(const std::array<uint32_t, 2>& in_x1y1)
+{
+    glfwSetWindowPos(m_window_ptr,
+                     in_x1y1.at(0),
+                     in_x1y1.at(1) );
 }
