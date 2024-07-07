@@ -1,6 +1,9 @@
 cmake_minimum_required (VERSION 2.8)
 project (Launcher)
 
+option (APIINTERCEPTOR_DUMP_API_CALLS "No need for API dump support" OFF)
+
+
 file(GLOB LauncherSources  "${Launcher_SOURCE_DIR}/Launcher/*.cpp")
 file(GLOB ReplayerIncludes "${Launcher_SOURCE_DIR}/Replayer/include/*.h")
 file(GLOB ReplayerSources  "${Launcher_SOURCE_DIR}/Replayer/src/*.cpp")
