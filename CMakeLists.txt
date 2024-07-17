@@ -19,6 +19,7 @@ add_library   (Replayer SHARED ${ReplayerIncludes}
 
 include_directories  ("${APIInterceptor_SOURCE_DIR}")
 include_directories  ("${APIInterceptor_SOURCE_DIR}/include")
+include_directories  ("${APIInterceptor_SOURCE_DIR}/include/Khronos")
 include_directories  ("${APIInterceptor_BINARY_DIR}")
 include_directories  ("${Launcher_SOURCE_DIR}/deps/")
 include_directories  ("${Launcher_SOURCE_DIR}/deps/imgui")
