@@ -134,56 +134,65 @@ void ReplayerWindow::execute()
     {
         glfwPollEvents();
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame   ();
-
-        ImGui::NewFrame();
-        {
-            int display_h = 0;
-            int display_w = 0;
-
-            glfwGetFramebufferSize(m_window_ptr,
-                                  &display_w,
-                                  &display_h);
-
-            ImGui::Begin("Hello.", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-            {
-                const auto window_size = ImGui::GetWindowSize();
-
-                /* If a snapshot has been captured, transfer it to the player */
-                {
-                    GLIDToTexturePropsMapUniquePtr new_snapshot_gl_id_to_texture_props_map_ptr;
-                    ReplayerSnapshotUniquePtr      new_snapshot_ptr;
-
-                    if (m_snapshotter_ptr->pop_snapshot(&new_snapshot_ptr,
-                                                        &new_snapshot_gl_id_to_texture_props_map_ptr) )
-                    {
-                        m_snapshot_player_ptr->load_snapshot(std::move(new_snapshot_ptr),
-                                                             std::move(new_snapshot_gl_id_to_texture_props_map_ptr) );
-                    }
-                }
-
-                if (!m_snapshot_player_ptr->is_snapshot_loaded() )
-                {
-                    ImGui::Text("Press F11 to capture a frame for replay.");
-                }
-
-                ImGui::SetWindowPos(ImVec2( (display_w - window_size.x) / 2,
-                                            (display_h - window_size.y) / 2) );
-            }
-            ImGui::End   ();
-            ImGui::Render();
-
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData() );
-        }
-
         if (m_snapshot_player_ptr->is_snapshot_loaded() )
         {
+            glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+            glClearDepth(0.0f);
+            glClear     (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
             m_snapshot_player_ptr->play_snapshot();
 
             // ImGui::Text("Snapshot available.");
+        }
+        else
+        {
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame   ();
+
+            ImGui::NewFrame();
+            {
+                int display_h = 0;
+                int display_w = 0;
+
+                glfwGetFramebufferSize(m_window_ptr,
+                                      &display_w,
+                                      &display_h);
+
+                ImGui::Begin("Hello.", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+                {
+                    const auto window_size = ImGui::GetWindowSize();
+
+                    /* If a snapshot has been captured, transfer it to the player */
+                    {
+                        GLIDToTexturePropsMapUniquePtr new_snapshot_gl_id_to_texture_props_map_ptr;
+                        ReplayerSnapshotUniquePtr      new_snapshot_ptr;
+                        GLContextStateUniquePtr        new_snapshot_start_gl_context_state_ptr;
+
+                        if (m_snapshotter_ptr->pop_snapshot(&new_snapshot_start_gl_context_state_ptr,
+                                                            &new_snapshot_ptr,
+                                                            &new_snapshot_gl_id_to_texture_props_map_ptr) )
+                        {
+                            m_snapshot_player_ptr->load_snapshot(std::move(new_snapshot_start_gl_context_state_ptr),
+                                                                 std::move(new_snapshot_ptr),
+                                                                 std::move(new_snapshot_gl_id_to_texture_props_map_ptr) );
+                        }
+                    }
+
+                    if (!m_snapshot_player_ptr->is_snapshot_loaded() )
+                    {
+                        ImGui::Text("Press F11 to capture a frame for replay.");
+                    }
+
+                    ImGui::SetWindowPos(ImVec2( (display_w - window_size.x) / 2,
+                                                (display_h - window_size.y) / 2) );
+                }
+                ImGui::End   ();
+                ImGui::Render();
+
+                glClear(GL_COLOR_BUFFER_BIT);
+
+                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData() );
+            }
         }
 
         glfwSwapBuffers(m_window_ptr);

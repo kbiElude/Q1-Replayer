@@ -29,12 +29,14 @@ bool ReplayerSnapshotPlayer::is_snapshot_loaded() const
     return (m_snapshot_ptr != nullptr);
 }
 
-void ReplayerSnapshotPlayer::load_snapshot(ReplayerSnapshotUniquePtr      in_snapshot_ptr,
+void ReplayerSnapshotPlayer::load_snapshot(GLContextStateUniquePtr        in_start_context_state_ptr,
+                                           ReplayerSnapshotUniquePtr      in_snapshot_ptr,
                                            GLIDToTexturePropsMapUniquePtr in_snapshot_gl_id_to_texture_props_map_ptr)
 {
     m_snapshot_gl_id_to_texture_props_map_ptr = std::move(in_snapshot_gl_id_to_texture_props_map_ptr);
     m_snapshot_initialized                    = false;
     m_snapshot_ptr                            = std::move(in_snapshot_ptr);
+    m_snapshot_start_gl_context_state_ptr     = std::move(in_start_context_state_ptr);
 
     m_snapshot_texture_gl_id_to_texture_gl_id_map.clear();
 }
@@ -47,6 +49,9 @@ void ReplayerSnapshotPlayer::play_snapshot()
 
     if (!m_snapshot_initialized)
     {
+        assert(m_snapshot_gl_id_to_texture_props_map_ptr != nullptr);
+
+        /* Set up textures.. */
         for (const auto& iterator : *m_snapshot_gl_id_to_texture_props_map_ptr)
         {
             uint32_t    new_texture_id       =  0;
@@ -89,6 +94,71 @@ void ReplayerSnapshotPlayer::play_snapshot()
 
         m_snapshot_initialized = true;
     }
+
+    /* Set up global state. */
+    {
+        assert(m_snapshot_start_gl_context_state_ptr != nullptr);
+
+        struct
+        {
+            GLenum capability;
+            bool   state;
+        } states_config[] =
+        {
+            {GL_ALPHA_TEST,   m_snapshot_start_gl_context_state_ptr->alpha_test_enabled},
+            {GL_BLEND,        m_snapshot_start_gl_context_state_ptr->blend_enabled},
+            {GL_CULL_FACE,    m_snapshot_start_gl_context_state_ptr->cull_face_enabled},
+            {GL_DEPTH_TEST,   m_snapshot_start_gl_context_state_ptr->depth_test_enabled},
+            {GL_SCISSOR_TEST, m_snapshot_start_gl_context_state_ptr->scissor_test_enabled},
+            {GL_TEXTURE_2D,   m_snapshot_start_gl_context_state_ptr->texture_2d_enabled},
+        };
+
+        for (const auto& current_state_config : states_config)
+        {
+            if (current_state_config.state)
+            {
+                reinterpret_cast<PFNGLENABLEPROC>(OpenGL::g_cached_gl_enable)(current_state_config.capability);
+            }
+            else
+            {
+                reinterpret_cast<PFNGLDISABLEPROC>(OpenGL::g_cached_gl_disable)(current_state_config.capability);
+            }
+        }
+
+        reinterpret_cast<PFNGLALPHAFUNCPROC> (OpenGL::g_cached_gl_alpha_func) (m_snapshot_start_gl_context_state_ptr->alpha_func_func,
+                                                                               m_snapshot_start_gl_context_state_ptr->alpha_func_ref);
+        reinterpret_cast<PFNGLSHADEMODELPROC>(OpenGL::g_cached_gl_shade_model)(m_snapshot_start_gl_context_state_ptr->shade_model);
+
+        {
+            const auto pfn_gl_bind_texture   = reinterpret_cast<PFNGLBINDTEXTUREPROC>  (OpenGL::g_cached_gl_bind_texture);
+            const auto pfn_gl_tex_parameterf = reinterpret_cast<PFNGLTEXPARAMETERFPROC>(OpenGL::g_cached_gl_tex_parameterf);
+
+            for (const auto& iterator : m_snapshot_start_gl_context_state_ptr->gl_texture_id_to_texture_state_map)
+            {
+                const auto& snapshot_gl_texture_id = iterator.first;
+                const auto& texture_state          = iterator.second;
+                const auto  gl_texture_id          = m_snapshot_texture_gl_id_to_texture_gl_id_map.at(snapshot_gl_texture_id);
+
+                pfn_gl_bind_texture(GL_TEXTURE_2D,
+                                    gl_texture_id);
+
+                pfn_gl_tex_parameterf(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, static_cast<float>(texture_state.base_level) );
+                pfn_gl_tex_parameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, static_cast<float>(texture_state.mag_filter) );
+                pfn_gl_tex_parameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL,  static_cast<float>(texture_state.max_level)  );
+                pfn_gl_tex_parameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD,    static_cast<float>(texture_state.max_lod)    );
+                pfn_gl_tex_parameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, static_cast<float>(texture_state.min_filter) );
+                pfn_gl_tex_parameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD,    static_cast<float>(texture_state.min_lod)    );
+                pfn_gl_tex_parameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R,     static_cast<float>(texture_state.wrap_r)     );
+                pfn_gl_tex_parameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     static_cast<float>(texture_state.wrap_s)     );
+                pfn_gl_tex_parameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     static_cast<float>(texture_state.wrap_t)     );
+            }
+        }
+    }
+
+    reinterpret_cast<PFNGLCLEARCOLORPROC>(OpenGL::g_cached_gl_clear_color)(m_snapshot_start_gl_context_state_ptr->clear_color[0],
+                                                                           m_snapshot_start_gl_context_state_ptr->clear_color[1],
+                                                                           m_snapshot_start_gl_context_state_ptr->clear_color[2],
+                                                                           m_snapshot_start_gl_context_state_ptr->clear_color[3]);
 
     for (uint32_t n_api_command = 0;
                   n_api_command < n_api_commands;
@@ -333,6 +403,21 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 reinterpret_cast<PFNGLSCALEFPROC>(OpenGL::g_cached_gl_scale_f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
                                                                                api_command_ptr->api_arg_vec.at(1).value.value_fp32,
                                                                                api_command_ptr->api_arg_vec.at(2).value.value_fp32);
+
+                break;
+            }
+
+            case APIInterceptor::APIFUNCTION_GL_GLSHADEMODEL:
+            {
+                reinterpret_cast<PFNGLSHADEMODELPROC>(OpenGL::g_cached_gl_shade_model)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+
+                break;
+            }
+
+            case APIInterceptor::APIFUNCTION_GL_GLTEXCOORD2F:
+            {
+                reinterpret_cast<PFNGLTEXCOORD2FPROC>(OpenGL::g_cached_gl_tex_coord_2f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
+                                                                                        api_command_ptr->api_arg_vec.at(1).value.value_fp32);
 
                 break;
             }

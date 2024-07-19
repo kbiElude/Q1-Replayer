@@ -22,7 +22,8 @@ public:
     ~ReplayerSnapshotter();
 
     void cache_snapshot();
-    bool pop_snapshot  (ReplayerSnapshotUniquePtr*      out_snapshot_ptr_ptr,
+    bool pop_snapshot  (GLContextStateUniquePtr*        out_start_gl_context_state_ptr_ptr,
+                        ReplayerSnapshotUniquePtr*      out_snapshot_ptr_ptr,
                         GLIDToTexturePropsMapUniquePtr* out_gl_id_to_texture_props_map_ptr_ptr);
 
 private:
@@ -37,11 +38,15 @@ private:
                                      void*                                      in_user_arg_ptr);
 
     /* Private vars */
+
+    GLContextStateUniquePtr                             m_current_context_state_ptr;
     GLIDToTexturePropsMapUniquePtr                      m_gl_id_to_texture_props_map_ptr;
+    GLContextStateUniquePtr                             m_start_gl_context_state_ptr;
     std::unordered_map<uint32_t /* GLenum */, uint32_t> m_texture_target_to_bound_texture_id_map;
 
     GLIDToTexturePropsMapUniquePtr m_cached_gl_id_to_texture_props_map_ptr;
     ReplayerSnapshotUniquePtr      m_cached_snapshot_ptr;
+    GLContextStateUniquePtr        m_cached_start_gl_context_state_ptr;
 
     ReplayerSnapshotUniquePtr m_recording_snapshot_ptr;
     bool                      m_snapshot_requested;

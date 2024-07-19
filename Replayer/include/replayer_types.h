@@ -25,6 +25,42 @@ struct APICommand
     }
 };
 
+struct GLContextTextureState
+{
+    int32_t  base_level;
+    uint32_t mag_filter;
+    int32_t  max_level;
+    float    max_lod;
+    uint32_t min_filter;
+    float    min_lod;
+    uint32_t wrap_s;
+    uint32_t wrap_t;
+    uint32_t wrap_r;
+
+    GLContextTextureState();
+};
+
+struct GLContextState
+{
+    bool alpha_test_enabled   = false;
+    bool blend_enabled        = false;
+    bool cull_face_enabled    = false;
+    bool depth_test_enabled   = false;
+    bool scissor_test_enabled = false;
+    bool texture_2d_enabled   = false;
+
+    uint32_t alpha_func_func;
+    float    alpha_func_ref;
+
+    float clear_color[4];
+
+    uint32_t shade_model;
+
+    std::unordered_map<uint32_t, GLContextTextureState> gl_texture_id_to_texture_state_map;
+
+    GLContextState();
+};
+
 enum class TextureType : uint8_t
 {
     _1D,
@@ -84,6 +120,7 @@ struct TextureProps
     }
 };
 
+typedef std::unique_ptr<GLContextState>            GLContextStateUniquePtr;
 typedef std::unordered_map<uint32_t, TextureProps> GLIDToTexturePropsMap;
 typedef std::unique_ptr<GLIDToTexturePropsMap>     GLIDToTexturePropsMapUniquePtr;
 

@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.8)
 project (Launcher)
 
-option (APIINTERCEPTOR_DUMP_API_CALLS "No need for API dump support" OFF)
+option (APIINTERCEPTOR_DUMP_API_CALLS "No need for API dump support" ON)
 
 
 file(GLOB LauncherSources  "${Launcher_SOURCE_DIR}/Launcher/*.cpp")

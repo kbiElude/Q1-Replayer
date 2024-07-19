@@ -22,7 +22,8 @@ public:
     ~ReplayerSnapshotPlayer();
 
     bool is_snapshot_loaded()                                                                          const;
-    void load_snapshot     (ReplayerSnapshotUniquePtr      in_snapshot_ptr,
+    void load_snapshot     (GLContextStateUniquePtr        in_start_context_state_ptr,
+                            ReplayerSnapshotUniquePtr      in_snapshot_ptr,
                             GLIDToTexturePropsMapUniquePtr in_snapshot_gl_id_to_texture_props_map_ptr);
     void play_snapshot     ();
 
@@ -36,6 +37,7 @@ private:
     GLIDToTexturePropsMapUniquePtr         m_snapshot_gl_id_to_texture_props_map_ptr;
     bool                                   m_snapshot_initialized;
     ReplayerSnapshotUniquePtr              m_snapshot_ptr;
+    GLContextStateUniquePtr                m_snapshot_start_gl_context_state_ptr;
     std::unordered_map<uint32_t, uint32_t> m_snapshot_texture_gl_id_to_texture_gl_id_map;
 };
 
