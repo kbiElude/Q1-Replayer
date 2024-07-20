@@ -38,7 +38,21 @@ void ReplayerSnapshotPlayer::load_snapshot(GLContextStateUniquePtr        in_sta
     m_snapshot_ptr                            = std::move(in_snapshot_ptr);
     m_snapshot_start_gl_context_state_ptr     = std::move(in_start_context_state_ptr);
 
-    m_snapshot_texture_gl_id_to_texture_gl_id_map.clear();
+    {
+        std::vector<uint32_t> gl_texture_id_vec;
+
+        gl_texture_id_vec.reserve(m_snapshot_texture_gl_id_to_texture_gl_id_map.size() );
+
+        for (const auto& iterator : m_snapshot_texture_gl_id_to_texture_gl_id_map)
+        {
+            gl_texture_id_vec.push_back(iterator.second);
+        }
+
+        reinterpret_cast<PFNGLDELETETEXTURESPROC>(OpenGL::g_cached_gl_delete_textures)(static_cast<GLsizei>  (gl_texture_id_vec.size() ),
+                                                                                       gl_texture_id_vec.data() );
+
+        m_snapshot_texture_gl_id_to_texture_gl_id_map.clear();
+    }
 }
 
 void ReplayerSnapshotPlayer::play_snapshot()
@@ -240,16 +254,12 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 break;
             }
 
-            case APIInterceptor::APIFUNCTION_GL_GLCOLOR3FV:
+            case APIInterceptor::APIFUNCTION_GL_GLCOLOR4F:
             {
-                assert(false); // todo
-
-                break;
-            }
-
-            case APIInterceptor::APIFUNCTION_GL_GLCOLOR4FV:
-            {
-                assert(false); // todo
+                reinterpret_cast<PFNGLCOLOR4FPROC>(OpenGL::g_cached_gl_color_4f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
+                                                                                 api_command_ptr->api_arg_vec.at(1).value.value_fp32,
+                                                                                 api_command_ptr->api_arg_vec.at(2).value.value_fp32,
+                                                                                 api_command_ptr->api_arg_vec.at(3).value.value_fp32);
 
                 break;
             }
@@ -354,13 +364,6 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 break;
             }
 
-            case APIInterceptor::APIFUNCTION_GL_GLNORMAL3FV:
-            {
-                assert(false); // todo
-
-                break;
-            }
-
             case APIInterceptor::APIFUNCTION_GL_GLORTHO:
             {
                 reinterpret_cast<PFNGLORTHOPROC>(OpenGL::g_cached_gl_ortho)(api_command_ptr->api_arg_vec.at(0).value.value_fp64,
@@ -422,23 +425,17 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 break;
             }
 
-            case APIInterceptor::APIFUNCTION_GL_GLTEXCOORD2FV:
+            case APIInterceptor::APIFUNCTION_GL_GLTEXIMAGE2D:
             {
-                assert(false); // todo
-
-                break;
-            }
-
-            case APIInterceptor::APIFUNCTION_GL_GLTEXCOORD3FV:
-            {
-                assert(false); // todo
-
-                break;
-            }
-
-            case APIInterceptor::APIFUNCTION_GL_GLTEXCOORD4FV:
-            {
-                assert(false); // todo
+                reinterpret_cast<PFNGLTEXIMAGE2DPROC>(OpenGL::g_cached_gl_tex_image_2d)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
+                                                                                        api_command_ptr->api_arg_vec.at(1).value.value_i32,
+                                                                                        api_command_ptr->api_arg_vec.at(2).value.value_i32,
+                                                                                        api_command_ptr->api_arg_vec.at(3).value.value_i32,
+                                                                                        api_command_ptr->api_arg_vec.at(4).value.value_i32,
+                                                                                        api_command_ptr->api_arg_vec.at(5).value.value_i32,
+                                                                                        api_command_ptr->api_arg_vec.at(6).value.value_u32,
+                                                                                        api_command_ptr->api_arg_vec.at(7).value.value_u32,
+                                                                                        api_command_ptr->api_arg_vec.at(8).value.value_ptr);
 
                 break;
             }
@@ -448,13 +445,6 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 reinterpret_cast<PFNGLTEXPARAMETERFPROC>(OpenGL::g_cached_gl_tex_parameterf)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
                                                                                              api_command_ptr->api_arg_vec.at(1).value.value_u32,
                                                                                              api_command_ptr->api_arg_vec.at(2).value.value_fp32);
-
-                break;
-            }
-
-            case APIInterceptor::APIFUNCTION_GL_GLTEXPARAMETERFV:
-            {
-                assert(false); // todo
 
                 break;
             }
@@ -476,25 +466,11 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 break;
             }
 
-            case APIInterceptor::APIFUNCTION_GL_GLVERTEX2FV:
-            {
-                assert(false); // todo
-
-                break;
-            }
-
             case APIInterceptor::APIFUNCTION_GL_GLVERTEX3F:
             {
                 reinterpret_cast<PFNGLVERTEX3FPROC>(OpenGL::g_cached_gl_vertex_3f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
                                                                                    api_command_ptr->api_arg_vec.at(1).value.value_fp32,
                                                                                    api_command_ptr->api_arg_vec.at(2).value.value_fp32);
-
-                break;
-            }
-
-            case APIInterceptor::APIFUNCTION_GL_GLVERTEX3FV:
-            {
-                assert(false); // todo
 
                 break;
             }
@@ -505,13 +481,6 @@ void ReplayerSnapshotPlayer::play_snapshot()
                                                                                    api_command_ptr->api_arg_vec.at(1).value.value_fp32,
                                                                                    api_command_ptr->api_arg_vec.at(2).value.value_fp32,
                                                                                    api_command_ptr->api_arg_vec.at(3).value.value_fp32);
-
-                break;
-            }
-
-            case APIInterceptor::APIFUNCTION_GL_GLVERTEX4FV:
-            {
-                assert(false); // todo
 
                 break;
             }

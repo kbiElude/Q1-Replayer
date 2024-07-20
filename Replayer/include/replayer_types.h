@@ -9,9 +9,12 @@
 #include <cassert>
 #include <memory>
 #include <thread>
+#include <map>
 #include <unordered_map>
 #include <vector>
 #include <Windows.h>
+
+#include "Common/types.h"
 
 struct APICommand
 {
@@ -83,6 +86,7 @@ struct MipProps
         /* Stub */
     
     }
+
     MipProps(const std::array<uint32_t, 3>& in_mip_size_u32vec3,
              const uint32_t&                in_format,
              const uint32_t&                in_type,
@@ -121,7 +125,7 @@ struct TextureProps
 };
 
 typedef std::unique_ptr<GLContextState>            GLContextStateUniquePtr;
-typedef std::unordered_map<uint32_t, TextureProps> GLIDToTexturePropsMap;
+typedef std::map<uint32_t, TextureProps> GLIDToTexturePropsMap;
 typedef std::unique_ptr<GLIDToTexturePropsMap>     GLIDToTexturePropsMapUniquePtr;
 
 #endif /* REPLAYER_TYPES_H */

@@ -7,8 +7,8 @@
 #include "replayer_snapshotter.h"
 #include <assert.h>
 
-HHOOK     g_keyboard_hook = 0;
-Replayer* g_replayer_ptr  = nullptr;
+HHOOK      g_keyboard_hook = 0;
+Replayer*  g_replayer_ptr  = nullptr;
 
 
 LRESULT CALLBACK on_keyboard_event(int    code,
@@ -19,7 +19,11 @@ LRESULT CALLBACK on_keyboard_event(int    code,
     {
         if (wParam == VK_F11)
         {
-            g_replayer_ptr->on_snapshot_requested();
+            /* Only react when the key is being released */
+            // if (lParam & (1 << 31) )
+            {
+                g_replayer_ptr->on_snapshot_requested();
+            }
         }
     }
 

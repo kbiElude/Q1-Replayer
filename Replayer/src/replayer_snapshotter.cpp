@@ -11,6 +11,9 @@
 #include "replayer.h"
 
 
+std::mutex g_world_mutex;
+
+
 ReplayerSnapshotter::ReplayerSnapshotter()
     :m_snapshot_requested(false)
 {
@@ -24,6 +27,8 @@ ReplayerSnapshotter::~ReplayerSnapshotter()
 
 void ReplayerSnapshotter::cache_snapshot()
 {
+    std::lock_guard<std::mutex> lock(g_world_mutex);
+
     m_snapshot_requested = true;
 }
 
@@ -71,7 +76,8 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
                                                const APIInterceptor::APIFunctionArgument* in_args_ptr,
                                                void*                                      in_user_arg_ptr)
 {
-    auto this_ptr = reinterpret_cast<ReplayerSnapshotter*>(in_user_arg_ptr);
+    std::lock_guard<std::mutex> lock    (g_world_mutex);
+    auto                        this_ptr(reinterpret_cast<ReplayerSnapshotter*>(in_user_arg_ptr) );
 
     if (this_ptr->m_start_gl_context_state_ptr == nullptr)
     {
@@ -280,16 +286,53 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
         if (should_record_api_call)
         {
             /* This is a generic GL call. Record it. */
-            this_ptr->m_recording_snapshot_ptr->record_api_call(in_api_func,
-                                                                in_n_args,
-                                                                in_args_ptr);
+            if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLCOLOR4FV)
+            {
+                /* Convert to non-ptr representation.. */
+                const auto                                               color_data_ptr = in_args_ptr[0].value.value_fp32_ptr;
+                const std::array<APIInterceptor::APIFunctionArgument, 4> api_arg_vec    =
+                {
+                    APIInterceptor::APIFunctionArgument::create_fp32(color_data_ptr[0]),
+                    APIInterceptor::APIFunctionArgument::create_fp32(color_data_ptr[1]),
+                    APIInterceptor::APIFunctionArgument::create_fp32(color_data_ptr[2]),
+                    APIInterceptor::APIFunctionArgument::create_fp32(color_data_ptr[3])
+                };
+
+                this_ptr->m_recording_snapshot_ptr->record_api_call(APIInterceptor::APIFUNCTION_GL_GLCOLOR4F,
+                                                                    static_cast<uint32_t>(api_arg_vec.size() ),
+                                                                    api_arg_vec.data     () );
+            }
+            else
+            if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLVERTEX3FV)
+            {
+                /* Convert to non-ptr representation.. */
+                const auto                                               vertex_data_ptr = in_args_ptr[0].value.value_fp32_ptr;
+                const std::array<APIInterceptor::APIFunctionArgument, 3> api_arg_vec     =
+                {
+                    APIInterceptor::APIFunctionArgument::create_fp32(vertex_data_ptr[0]),
+                    APIInterceptor::APIFunctionArgument::create_fp32(vertex_data_ptr[1]),
+                    APIInterceptor::APIFunctionArgument::create_fp32(vertex_data_ptr[2])
+                };
+
+                this_ptr->m_recording_snapshot_ptr->record_api_call(APIInterceptor::APIFUNCTION_GL_GLVERTEX3F,
+                                                                    static_cast<uint32_t>(api_arg_vec.size() ),
+                                                                    api_arg_vec.data     () );
+            }
+            else
+            {
+                this_ptr->m_recording_snapshot_ptr->record_api_call(in_api_func,
+                                                                    in_n_args,
+                                                                    in_args_ptr);
+            }
         }
     }
     else
     {
-        /* This snapshot is complete. */
+        /* This snapshot is complete. Stash if needed. */
         if (this_ptr->m_snapshot_requested)
         {
+            assert(this_ptr->m_gl_id_to_texture_props_map_ptr != nullptr);
+
             this_ptr->m_cached_gl_id_to_texture_props_map_ptr.reset(new GLIDToTexturePropsMap(*this_ptr->m_gl_id_to_texture_props_map_ptr) );
 
             this_ptr->m_cached_snapshot_ptr               = std::move(this_ptr->m_recording_snapshot_ptr);
@@ -308,7 +351,8 @@ bool ReplayerSnapshotter::pop_snapshot(GLContextStateUniquePtr*        out_start
                                        ReplayerSnapshotUniquePtr*      out_snapshot_ptr_ptr,
                                        GLIDToTexturePropsMapUniquePtr* out_gl_id_to_texture_props_map_ptr_ptr)
 {
-    bool result = false;
+    std::lock_guard<std::mutex> lock  (g_world_mutex);
+    bool                        result(false);
 
     if (m_cached_gl_id_to_texture_props_map_ptr != nullptr)
     {

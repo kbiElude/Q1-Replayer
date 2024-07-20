@@ -2,6 +2,7 @@
  *
  * This code is licensed under MIT license (see LICENSE.txt for details)
  */
+#include "replayer.h"
 #include "replayer_snapshot_player.h"
 #include "replayer_snapshotter.h"
 #include "replayer_window.h"
@@ -134,6 +135,22 @@ void ReplayerWindow::execute()
     {
         glfwPollEvents();
 
+         /* If a snapshot has been captured, transfer it to the player */
+         {
+             GLIDToTexturePropsMapUniquePtr new_snapshot_gl_id_to_texture_props_map_ptr;
+             ReplayerSnapshotUniquePtr      new_snapshot_ptr;
+             GLContextStateUniquePtr        new_snapshot_start_gl_context_state_ptr;
+
+             if (m_snapshotter_ptr->pop_snapshot(&new_snapshot_start_gl_context_state_ptr,
+                                                 &new_snapshot_ptr,
+                                                 &new_snapshot_gl_id_to_texture_props_map_ptr) )
+             {
+                 m_snapshot_player_ptr->load_snapshot(std::move(new_snapshot_start_gl_context_state_ptr),
+                                                      std::move(new_snapshot_ptr),
+                                                      std::move(new_snapshot_gl_id_to_texture_props_map_ptr) );
+             }
+         }
+
         if (m_snapshot_player_ptr->is_snapshot_loaded() )
         {
             glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
@@ -162,26 +179,7 @@ void ReplayerWindow::execute()
                 {
                     const auto window_size = ImGui::GetWindowSize();
 
-                    /* If a snapshot has been captured, transfer it to the player */
-                    {
-                        GLIDToTexturePropsMapUniquePtr new_snapshot_gl_id_to_texture_props_map_ptr;
-                        ReplayerSnapshotUniquePtr      new_snapshot_ptr;
-                        GLContextStateUniquePtr        new_snapshot_start_gl_context_state_ptr;
-
-                        if (m_snapshotter_ptr->pop_snapshot(&new_snapshot_start_gl_context_state_ptr,
-                                                            &new_snapshot_ptr,
-                                                            &new_snapshot_gl_id_to_texture_props_map_ptr) )
-                        {
-                            m_snapshot_player_ptr->load_snapshot(std::move(new_snapshot_start_gl_context_state_ptr),
-                                                                 std::move(new_snapshot_ptr),
-                                                                 std::move(new_snapshot_gl_id_to_texture_props_map_ptr) );
-                        }
-                    }
-
-                    if (!m_snapshot_player_ptr->is_snapshot_loaded() )
-                    {
-                        ImGui::Text("Press F11 to capture a frame for replay.");
-                    }
+                    ImGui::Text("Press F11 to capture a frame for replay.");
 
                     ImGui::SetWindowPos(ImVec2( (display_w - window_size.x) / 2,
                                                 (display_h - window_size.y) / 2) );
