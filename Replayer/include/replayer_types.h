@@ -64,6 +64,7 @@ struct GLContextState
     double   depth_range[2]; // near, far
     uint32_t draw_buffer_mode;
     uint32_t front_face_mode;
+    uint32_t matrix_mode;
     uint32_t shade_model;
     uint32_t texture_env_mode;
     int32_t  viewport_extents[2];

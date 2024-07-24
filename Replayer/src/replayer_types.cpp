@@ -26,6 +26,7 @@ GLContextState::GLContextState(const uint32_t& in_q1_window_width,
     depth_range[1]         = 1.0f;
     draw_buffer_mode       = GL_BACK;
     front_face_mode        = GL_CCW;
+    matrix_mode            = GL_MODELVIEW;
     shade_model            = GL_SMOOTH;
     texture_env_mode       = GL_MODULATE;
     viewport_extents[0]    = in_q1_window_width;

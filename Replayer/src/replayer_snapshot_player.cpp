@@ -164,6 +164,7 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
                                                                                m_snapshot_start_gl_context_state_ptr->depth_range[1]);
         reinterpret_cast<PFNGLDRAWBUFFERPROC>(OpenGL::g_cached_gl_draw_buffer)(m_snapshot_start_gl_context_state_ptr->draw_buffer_mode);
         reinterpret_cast<PFNGLFRONTFACEPROC> (OpenGL::g_cached_gl_front_face) (m_snapshot_start_gl_context_state_ptr->front_face_mode);
+        reinterpret_cast<PFNGLMATRIXMODEPROC>(OpenGL::g_cached_gl_matrix_mode)(m_snapshot_start_gl_context_state_ptr->matrix_mode);
         reinterpret_cast<PFNGLSHADEMODELPROC>(OpenGL::g_cached_gl_shade_model)(m_snapshot_start_gl_context_state_ptr->shade_model);
         reinterpret_cast<PFNGLTEXENVFPROC>   (OpenGL::g_cached_gl_tex_env_f)  (GL_TEXTURE_ENV,
                                                                                GL_TEXTURE_ENV_MODE,
