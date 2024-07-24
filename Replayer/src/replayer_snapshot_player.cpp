@@ -416,27 +416,9 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
                     break;
                 }
 
-                case APIInterceptor::APIFUNCTION_GL_GLLOADMATRIXF:
-                {
-                    assert(false); // todo
-
-                    //reinterpret_cast<PFNGLLOADMATRIXFPROC>(OpenGL::g_cached_gl_load_matrix_f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32_ptr);
-
-                    break;
-                }
-
                 case APIInterceptor::APIFUNCTION_GL_GLMATRIXMODE:
                 {
                     reinterpret_cast<PFNGLMATRIXMODEPROC>(OpenGL::g_cached_gl_matrix_mode)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
-
-                    break;
-                }
-
-                case APIInterceptor::APIFUNCTION_GL_GLMULTMATRIXF:
-                {
-                    assert(false); // todo
-
-                    //reinterpret_cast<PFNGLMULTMATRIXFPROC>(OpenGL::g_cached_gl_mult_matrix_f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32_ptr);
 
                     break;
                 }
