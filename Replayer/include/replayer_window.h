@@ -19,6 +19,8 @@ typedef std::unique_ptr<ReplayerWindow> ReplayerWindowUniquePtr;
 class ReplayerWindow
 {
 public:
+    /* Public consts */
+
     /* Public funcs */
     ~ReplayerWindow();
 

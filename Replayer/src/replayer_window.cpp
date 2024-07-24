@@ -153,13 +153,7 @@ void ReplayerWindow::execute()
 
         if (m_snapshot_player_ptr->is_snapshot_loaded() )
         {
-            glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-            glClearDepth(0.0f);
-            glClear     (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
             m_snapshot_player_ptr->play_snapshot();
-
-            // ImGui::Text("Snapshot available.");
         }
         else
         {

@@ -54,10 +54,16 @@ struct GLContextState
 
     uint32_t alpha_func_func;
     float    alpha_func_ref;
-
-    float clear_color[4];
-
+    uint32_t blend_func_dfactor;
+    uint32_t blend_func_sfactor;
+    float    clear_color[4];
+    double   clear_depth;
+    uint32_t depth_func;
+    bool     depth_mask;
+    double   depth_range[2]; // near, far
+    uint32_t draw_buffer_mode;
     uint32_t shade_model;
+    uint32_t texture_env_mode;
 
     std::unordered_map<uint32_t, GLContextTextureState> gl_texture_id_to_texture_state_map;
 

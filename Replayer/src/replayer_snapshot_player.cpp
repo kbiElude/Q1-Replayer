@@ -141,7 +141,22 @@ void ReplayerSnapshotPlayer::play_snapshot()
 
         reinterpret_cast<PFNGLALPHAFUNCPROC> (OpenGL::g_cached_gl_alpha_func) (m_snapshot_start_gl_context_state_ptr->alpha_func_func,
                                                                                m_snapshot_start_gl_context_state_ptr->alpha_func_ref);
+        reinterpret_cast<PFNGLBLENDFUNCPROC> (OpenGL::g_cached_gl_blend_func) (m_snapshot_start_gl_context_state_ptr->blend_func_sfactor,
+                                                                               m_snapshot_start_gl_context_state_ptr->blend_func_dfactor);
+        reinterpret_cast<PFNGLCLEARCOLORPROC>(OpenGL::g_cached_gl_clear_color)(m_snapshot_start_gl_context_state_ptr->clear_color[0],
+                                                                               m_snapshot_start_gl_context_state_ptr->clear_color[1],
+                                                                               m_snapshot_start_gl_context_state_ptr->clear_color[2],
+                                                                               m_snapshot_start_gl_context_state_ptr->clear_color[3]);
+        reinterpret_cast<PFNGLCLEARDEPTHPROC>(OpenGL::g_cached_gl_clear_depth)(m_snapshot_start_gl_context_state_ptr->clear_depth);
+        reinterpret_cast<PFNGLDEPTHFUNCPROC> (OpenGL::g_cached_gl_depth_func) (m_snapshot_start_gl_context_state_ptr->depth_func);
+        reinterpret_cast<PFNGLDEPTHMASKPROC> (OpenGL::g_cached_gl_depth_mask) (m_snapshot_start_gl_context_state_ptr->depth_mask);
+        reinterpret_cast<PFNGLDEPTHRANGEPROC>(OpenGL::g_cached_gl_depth_range)(m_snapshot_start_gl_context_state_ptr->depth_range[0],
+                                                                               m_snapshot_start_gl_context_state_ptr->depth_range[1]);
+        reinterpret_cast<PFNGLDRAWBUFFERPROC>(OpenGL::g_cached_gl_draw_buffer)(m_snapshot_start_gl_context_state_ptr->draw_buffer_mode);
         reinterpret_cast<PFNGLSHADEMODELPROC>(OpenGL::g_cached_gl_shade_model)(m_snapshot_start_gl_context_state_ptr->shade_model);
+        reinterpret_cast<PFNGLTEXENVFPROC>   (OpenGL::g_cached_gl_tex_env_f)  (GL_TEXTURE_ENV,
+                                                                               GL_TEXTURE_ENV_MODE,
+                                                                               static_cast<GLfloat>(m_snapshot_start_gl_context_state_ptr->texture_env_mode) );
 
         {
             const auto pfn_gl_bind_texture   = reinterpret_cast<PFNGLBINDTEXTUREPROC>  (OpenGL::g_cached_gl_bind_texture);
@@ -169,10 +184,7 @@ void ReplayerSnapshotPlayer::play_snapshot()
         }
     }
 
-    reinterpret_cast<PFNGLCLEARCOLORPROC>(OpenGL::g_cached_gl_clear_color)(m_snapshot_start_gl_context_state_ptr->clear_color[0],
-                                                                           m_snapshot_start_gl_context_state_ptr->clear_color[1],
-                                                                           m_snapshot_start_gl_context_state_ptr->clear_color[2],
-                                                                           m_snapshot_start_gl_context_state_ptr->clear_color[3]);
+    reinterpret_cast<PFNGLCLEARPROC>(OpenGL::g_cached_gl_clear)(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     for (uint32_t n_api_command = 0;
                   n_api_command < n_api_commands;
@@ -223,6 +235,14 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 break;
             }
 
+            case APIInterceptor::APIFUNCTION_GL_GLBLENDFUNC:
+            {
+                reinterpret_cast<PFNGLBLENDFUNCPROC>(OpenGL::g_cached_gl_blend_func)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
+                                                                                     api_command_ptr->api_arg_vec.at(1).value.value_u32);
+
+                break;
+            }
+
             case APIInterceptor::APIFUNCTION_GL_GLCLEAR:
             {
                 reinterpret_cast<PFNGLCLEARPROC>(OpenGL::g_cached_gl_clear)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
@@ -254,6 +274,24 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 break;
             }
 
+            case APIInterceptor::APIFUNCTION_GL_GLCOLOR3F:
+            {
+                reinterpret_cast<PFNGLCOLOR3FPROC>(OpenGL::g_cached_gl_color_3f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
+                                                                                 api_command_ptr->api_arg_vec.at(1).value.value_fp32,
+                                                                                 api_command_ptr->api_arg_vec.at(2).value.value_fp32);
+
+                break;
+            }
+
+            case APIInterceptor::APIFUNCTION_GL_GLCOLOR3UB:
+            {
+                reinterpret_cast<PFNGLCOLOR3UBPROC>(OpenGL::g_cached_gl_color_3ub)(api_command_ptr->api_arg_vec.at(0).value.value_u8,
+                                                                                   api_command_ptr->api_arg_vec.at(1).value.value_u8,
+                                                                                   api_command_ptr->api_arg_vec.at(2).value.value_u8);
+
+                break;
+            }
+
             case APIInterceptor::APIFUNCTION_GL_GLCOLOR4F:
             {
                 reinterpret_cast<PFNGLCOLOR4FPROC>(OpenGL::g_cached_gl_color_4f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
@@ -278,9 +316,31 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 break;
             }
 
+            case APIInterceptor::APIFUNCTION_GL_GLDEPTHMASK:
+            {
+                reinterpret_cast<PFNGLDEPTHMASKPROC>(OpenGL::g_cached_gl_depth_mask)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+
+                break;
+            }
+
+            case APIInterceptor::APIFUNCTION_GL_GLDEPTHRANGE:
+            {
+                reinterpret_cast<PFNGLDEPTHRANGEPROC>(OpenGL::g_cached_gl_depth_range)(api_command_ptr->api_arg_vec.at(0).value.value_fp64,
+                                                                                       api_command_ptr->api_arg_vec.at(1).value.value_fp64);
+
+                break;
+            }
+
             case APIInterceptor::APIFUNCTION_GL_GLDISABLE:
             {
                 reinterpret_cast<PFNGLDISABLEPROC>(OpenGL::g_cached_gl_disable)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+
+                break;
+            }
+
+            case APIInterceptor::APIFUNCTION_GL_GLDRAWBUFFER:
+            {
+                reinterpret_cast<PFNGLDRAWBUFFERPROC>(OpenGL::g_cached_gl_draw_buffer)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
 
                 break;
             }
@@ -384,6 +444,20 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 break;
             }
 
+            case APIInterceptor::APIFUNCTION_GL_GLPOPMATRIX:
+            {
+                reinterpret_cast<PFNGLPOPMATRIXPROC>(OpenGL::g_cached_gl_pop_matrix)();
+
+                break;
+            }
+
+            case APIInterceptor::APIFUNCTION_GL_GLPUSHMATRIX:
+            {
+                reinterpret_cast<PFNGLPUSHMATRIXPROC>(OpenGL::g_cached_gl_push_matrix)();
+
+                break;
+            }
+
             case APIInterceptor::APIFUNCTION_GL_GLREADPIXELS:
             {
                 // No need to replay this
@@ -421,6 +495,15 @@ void ReplayerSnapshotPlayer::play_snapshot()
             {
                 reinterpret_cast<PFNGLTEXCOORD2FPROC>(OpenGL::g_cached_gl_tex_coord_2f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
                                                                                         api_command_ptr->api_arg_vec.at(1).value.value_fp32);
+
+                break;
+            }
+
+            case APIInterceptor::APIFUNCTION_GL_GLTEXENVF:
+            {
+                reinterpret_cast<PFNGLTEXENVFPROC>(OpenGL::g_cached_gl_tex_env_f)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
+                                                                                  api_command_ptr->api_arg_vec.at(1).value.value_u32,
+                                                                                  api_command_ptr->api_arg_vec.at(2).value.value_fp32);
 
                 break;
             }

@@ -8,13 +8,22 @@
 
 GLContextState::GLContextState()
 {
-    alpha_func_func = GL_ALWAYS;
-    alpha_func_ref  = 0.0f;
-    clear_color[0]  = 0.0f;
-    clear_color[1]  = 0.0f;
-    clear_color[2]  = 0.0f;
-    clear_color[3]  = 0.0f;
-    shade_model     = GL_SMOOTH;
+    alpha_func_func    = GL_ALWAYS;
+    alpha_func_ref     = 0.0f;
+    blend_func_dfactor = GL_ZERO;
+    blend_func_sfactor = GL_ONE;
+    clear_color[0]     = 0.0f;
+    clear_color[1]     = 0.0f;
+    clear_color[2]     = 0.0f;
+    clear_color[3]     = 0.0f;
+    clear_depth        = 1.0;
+    depth_func         = GL_LESS;
+    depth_mask         = true;
+    depth_range[0]     = 0.0f;
+    depth_range[1]     = 1.0f;
+    draw_buffer_mode   = GL_BACK;
+    shade_model        = GL_SMOOTH;
+    texture_env_mode   = GL_MODULATE;
 }
 
 GLContextTextureState::GLContextTextureState()

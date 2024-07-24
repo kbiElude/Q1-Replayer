@@ -20,7 +20,7 @@ LRESULT CALLBACK on_keyboard_event(int    code,
         if (wParam == VK_F11)
         {
             /* Only react when the key is being released */
-            // if (lParam & (1 << 31) )
+            if (lParam & (1 << 31) )
             {
                 g_replayer_ptr->on_snapshot_requested();
             }

@@ -129,6 +129,15 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
             this_ptr->m_current_context_state_ptr->alpha_func_ref  = ref;
         }
         else
+        if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLBLENDFUNC)
+        {
+            const auto sfactor = in_args_ptr[0].value.value_u32;
+            const auto dfactor = in_args_ptr[1].value.value_u32;
+
+            this_ptr->m_current_context_state_ptr->blend_func_sfactor = sfactor;
+            this_ptr->m_current_context_state_ptr->blend_func_dfactor = dfactor;
+        }
+        else
         if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLCLEARCOLOR)
         {
             const auto red   = in_args_ptr[0].value.value_fp32;
@@ -142,11 +151,62 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
             this_ptr->m_current_context_state_ptr->clear_color[3] = alpha;
         }
         else
+        if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLCLEARDEPTH)
+        {
+            const auto depth = in_args_ptr[0].value.value_fp64;
+
+            this_ptr->m_current_context_state_ptr->clear_depth = depth;
+        }
+        else
+        if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLDEPTHFUNC)
+        {
+            const auto func = in_args_ptr[0].value.value_u32;
+
+            this_ptr->m_current_context_state_ptr->depth_func = func;
+        }
+        else
+        if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLDEPTHMASK)
+        {
+            const auto flag = in_args_ptr[0].value.value_u32;
+
+            this_ptr->m_current_context_state_ptr->depth_mask = (flag != 0);
+        }
+        else
+        if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLDEPTHRANGE)
+        {
+            const auto n = in_args_ptr[0].value.value_fp64;
+            const auto f = in_args_ptr[1].value.value_fp64;
+
+            this_ptr->m_current_context_state_ptr->depth_range[0] = n;
+            this_ptr->m_current_context_state_ptr->depth_range[1] = f;
+        }
+        else
+        if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLDRAWBUFFER)
+        {
+            const auto mode = in_args_ptr[0].value.value_u32;
+
+            this_ptr->m_current_context_state_ptr->draw_buffer_mode = mode;
+        }
+        else
         if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLSHADEMODEL)
         {
             const auto mode = in_args_ptr[0].value.value_u32;
 
             this_ptr->m_current_context_state_ptr->shade_model = mode;
+        }
+        else
+        if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLTEXENVF)
+        {
+            AI_ASSERT(in_n_args == 3);
+
+            const auto target = in_args_ptr[0].value.value_u32;
+            const auto pname  = in_args_ptr[1].value.value_u32;
+            const auto param  = in_args_ptr[2].value.value_fp32;
+
+            AI_ASSERT(target == GL_TEXTURE_ENV);
+            AI_ASSERT(pname  == GL_TEXTURE_ENV_MODE);
+
+            this_ptr->m_current_context_state_ptr->texture_env_mode = static_cast<uint32_t>(param);
         }
         else
         /* If this is a GL call which sets up a texture or updates existing texture's mip's contents,
@@ -286,6 +346,22 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
         if (should_record_api_call)
         {
             /* This is a generic GL call. Record it. */
+            if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLCOLOR3UBV)
+            {
+                /* Convert to non-ptr representation.. */
+                const auto                                               color_data_ptr = reinterpret_cast<const unsigned char*>(in_args_ptr[0].value.value_ptr);
+                const std::array<APIInterceptor::APIFunctionArgument, 3> api_arg_vec    =
+                {
+                    APIInterceptor::APIFunctionArgument::create_u8(color_data_ptr[0]),
+                    APIInterceptor::APIFunctionArgument::create_u8(color_data_ptr[1]),
+                    APIInterceptor::APIFunctionArgument::create_u8(color_data_ptr[2]),
+                };
+
+                this_ptr->m_recording_snapshot_ptr->record_api_call(APIInterceptor::APIFUNCTION_GL_GLCOLOR3UB,
+                                                                    static_cast<uint32_t>(api_arg_vec.size() ),
+                                                                    api_arg_vec.data     () );
+            }
+            else
             if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLCOLOR4FV)
             {
                 /* Convert to non-ptr representation.. */
@@ -354,19 +430,22 @@ bool ReplayerSnapshotter::pop_snapshot(GLContextStateUniquePtr*        out_start
     std::lock_guard<std::mutex> lock  (g_world_mutex);
     bool                        result(false);
 
-    if (m_cached_gl_id_to_texture_props_map_ptr != nullptr)
+    if (m_snapshot_requested == false)
     {
-        assert(m_cached_snapshot_ptr != nullptr);
+        if (m_cached_gl_id_to_texture_props_map_ptr != nullptr)
+        {
+            assert(m_cached_snapshot_ptr != nullptr);
 
-        *out_gl_id_to_texture_props_map_ptr_ptr = std::move(m_cached_gl_id_to_texture_props_map_ptr);
-        *out_snapshot_ptr_ptr                   = std::move(m_cached_snapshot_ptr);
-        *out_start_gl_context_state_ptr_ptr     = std::move(m_cached_start_gl_context_state_ptr);
+            *out_gl_id_to_texture_props_map_ptr_ptr = std::move(m_cached_gl_id_to_texture_props_map_ptr);
+            *out_snapshot_ptr_ptr                   = std::move(m_cached_snapshot_ptr);
+            *out_start_gl_context_state_ptr_ptr     = std::move(m_cached_start_gl_context_state_ptr);
 
-        result = true;
-    }
-    else
-    {
-        assert(m_cached_snapshot_ptr == nullptr);
+            result = true;
+        }
+        else
+        {
+            assert(m_cached_snapshot_ptr == nullptr);
+        }
     }
 
     return result;
