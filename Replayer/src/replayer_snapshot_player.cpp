@@ -115,6 +115,9 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
             }
         }
 
+        reinterpret_cast<PFNGLBINDTEXTUREPROC>(OpenGL::g_cached_gl_bind_texture)(GL_TEXTURE_2D,
+                                                                                 0);
+
         m_snapshot_initialized = true;
     }
 
