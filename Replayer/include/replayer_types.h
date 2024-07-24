@@ -66,11 +66,14 @@ struct GLContextState
     uint32_t front_face_mode;
     uint32_t shade_model;
     uint32_t texture_env_mode;
+    int32_t  viewport_extents[2];
+    int32_t  viewport_x1y1   [2];
 
     uint32_t                                            bound_2d_texture_gl_id;
     std::unordered_map<uint32_t, GLContextTextureState> gl_texture_id_to_texture_state_map;
 
-    GLContextState();
+    GLContextState(const uint32_t& in_q1_window_width,
+                   const uint32_t& in_q1_window_height);
 };
 
 enum class TextureType : uint8_t

@@ -6,7 +6,8 @@
 #include "APIInterceptor/include/Common/types.h"
 #include "replayer_types.h"
 
-GLContextState::GLContextState()
+GLContextState::GLContextState(const uint32_t& in_q1_window_width,
+                               const uint32_t& in_q1_window_height)
 {
     alpha_func_func        = GL_ALWAYS;
     alpha_func_ref         = 0.0f;
@@ -27,6 +28,10 @@ GLContextState::GLContextState()
     front_face_mode        = GL_CCW;
     shade_model            = GL_SMOOTH;
     texture_env_mode       = GL_MODULATE;
+    viewport_extents[0]    = in_q1_window_width;
+    viewport_extents[1]    = in_q1_window_height;
+    viewport_x1y1   [0]    = 0;
+    viewport_x1y1   [1]    = 0;
 }
 
 GLContextTextureState::GLContextTextureState()

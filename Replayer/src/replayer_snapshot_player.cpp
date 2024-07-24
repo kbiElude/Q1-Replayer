@@ -168,6 +168,10 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
         reinterpret_cast<PFNGLTEXENVFPROC>   (OpenGL::g_cached_gl_tex_env_f)  (GL_TEXTURE_ENV,
                                                                                GL_TEXTURE_ENV_MODE,
                                                                                static_cast<GLfloat>(m_snapshot_start_gl_context_state_ptr->texture_env_mode) );
+        reinterpret_cast<PFNGLVIEWPORTPROC>  (OpenGL::g_cached_gl_viewport)   (m_snapshot_start_gl_context_state_ptr->viewport_x1y1   [0],
+                                                                               m_snapshot_start_gl_context_state_ptr->viewport_x1y1   [1],
+                                                                               m_snapshot_start_gl_context_state_ptr->viewport_extents[0],
+                                                                               m_snapshot_start_gl_context_state_ptr->viewport_extents[1]);
 
         {
             const auto pfn_gl_bind_texture   = reinterpret_cast<PFNGLBINDTEXTUREPROC>  (OpenGL::g_cached_gl_bind_texture);
@@ -432,14 +436,6 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
                                                                                 api_command_ptr->api_arg_vec.at(3).value.value_fp64,
                                                                                 api_command_ptr->api_arg_vec.at(4).value.value_fp64,
                                                                                 api_command_ptr->api_arg_vec.at(5).value.value_fp64);
-
-                    break;
-                }
-
-                case APIInterceptor::APIFUNCTION_GL_GLPOLYGONMODE:
-                {
-                    reinterpret_cast<PFNGLPOLYGONMODEPROC>(OpenGL::g_cached_gl_polygon_mode)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
-                                                                                             api_command_ptr->api_arg_vec.at(1).value.value_u32);
 
                     break;
                 }

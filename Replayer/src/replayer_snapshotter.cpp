@@ -14,8 +14,9 @@
 std::mutex g_world_mutex;
 
 
-ReplayerSnapshotter::ReplayerSnapshotter()
-    :m_snapshot_requested(false)
+ReplayerSnapshotter::ReplayerSnapshotter(const Replayer* in_replayer_ptr)
+    :m_replayer_ptr      (in_replayer_ptr),
+     m_snapshot_requested(false)
 {
     /* Stub */
 }
@@ -32,9 +33,9 @@ void ReplayerSnapshotter::cache_snapshot()
     m_snapshot_requested = true;
 }
 
-ReplayerSnapshotterUniquePtr ReplayerSnapshotter::create()
+ReplayerSnapshotterUniquePtr ReplayerSnapshotter::create(const Replayer* in_replayer_ptr)
 {
-    ReplayerSnapshotterUniquePtr result_ptr(new ReplayerSnapshotter() );
+    ReplayerSnapshotterUniquePtr result_ptr(new ReplayerSnapshotter(in_replayer_ptr) );
 
     if (result_ptr != nullptr)
     {
@@ -50,7 +51,10 @@ ReplayerSnapshotterUniquePtr ReplayerSnapshotter::create()
 bool ReplayerSnapshotter::init()
 {
     /* Initialize object instances. */
-    m_current_context_state_ptr.reset     (new GLContextState() );
+    const auto q1_window_extents = m_replayer_ptr->get_q1_window_extents();
+
+    m_current_context_state_ptr.reset     (new GLContextState       (q1_window_extents.at(0),
+                                                                     q1_window_extents.at(1) ) );
     m_gl_id_to_texture_props_map_ptr.reset(new GLIDToTexturePropsMap() );
 
     /* Initialize callback handlers for all GL entrypoints used by Q1. */
@@ -221,6 +225,21 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
             AI_ASSERT(pname  == GL_TEXTURE_ENV_MODE);
 
             this_ptr->m_current_context_state_ptr->texture_env_mode = static_cast<uint32_t>(param);
+        }
+        else
+        if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLVIEWPORT)
+        {
+            AI_ASSERT(in_n_args == 4);
+
+            const auto x      = in_args_ptr[0].value.value_i32;
+            const auto y      = in_args_ptr[1].value.value_i32;
+            const auto width  = in_args_ptr[2].value.value_u32;
+            const auto height = in_args_ptr[3].value.value_u32;
+
+            this_ptr->m_current_context_state_ptr->viewport_x1y1   [0] = x;
+            this_ptr->m_current_context_state_ptr->viewport_x1y1   [1] = y;
+            this_ptr->m_current_context_state_ptr->viewport_extents[0] = width;
+            this_ptr->m_current_context_state_ptr->viewport_extents[1] = height;
         }
         else
         /* If this is a GL call which sets up a texture or updates existing texture's mip's contents,

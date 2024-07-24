@@ -23,7 +23,8 @@ public:
 
     ~Replayer();
 
-    void on_snapshot_requested();
+    std::array<uint32_t, 2> get_q1_window_extents() const;
+    void                    on_snapshot_requested();
 
 private:
     /* Private funcs */
