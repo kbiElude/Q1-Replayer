@@ -70,6 +70,10 @@ struct GLContextState
     int32_t  viewport_extents[2];
     int32_t  viewport_x1y1   [2];
 
+    // NOTE: Matrix state is only stored for snapshots!.
+    double   modelview_matrix [16];
+    double   projection_matrix[16];
+
     uint32_t                                            bound_2d_texture_gl_id;
     std::unordered_map<uint32_t, GLContextTextureState> gl_texture_id_to_texture_state_map;
 

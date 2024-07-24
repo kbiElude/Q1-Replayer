@@ -33,6 +33,15 @@ GLContextState::GLContextState(const uint32_t& in_q1_window_width,
     viewport_extents[1]    = in_q1_window_height;
     viewport_x1y1   [0]    = 0;
     viewport_x1y1   [1]    = 0;
+
+    modelview_matrix[0]  = 1; modelview_matrix[1]  = 0; modelview_matrix[2]  = 0; modelview_matrix[3]  = 0;
+    modelview_matrix[4]  = 0; modelview_matrix[5]  = 1; modelview_matrix[6]  = 0; modelview_matrix[7]  = 0;
+    modelview_matrix[8]  = 0; modelview_matrix[9]  = 0; modelview_matrix[10] = 1; modelview_matrix[11] = 0;
+    modelview_matrix[12] = 0; modelview_matrix[13] = 0; modelview_matrix[14] = 0; modelview_matrix[15] = 1;
+
+    memcpy(projection_matrix,
+           modelview_matrix,
+           sizeof(double) * 16);
 }
 
 GLContextTextureState::GLContextTextureState()

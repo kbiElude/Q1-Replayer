@@ -88,6 +88,12 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
         this_ptr->m_start_gl_context_state_ptr.reset(new GLContextState(*this_ptr->m_current_context_state_ptr) );
 
         assert(this_ptr->m_start_gl_context_state_ptr != nullptr);
+
+        /* Query & store matrix state */
+        reinterpret_cast<PFNGLGETDOUBLEVPROC>(OpenGL::g_cached_gl_get_doublev)(GL_MODELVIEW_MATRIX,
+                                                                               this_ptr->m_start_gl_context_state_ptr->modelview_matrix);
+        reinterpret_cast<PFNGLGETDOUBLEVPROC>(OpenGL::g_cached_gl_get_doublev)(GL_PROJECTION_MATRIX,
+                                                                               this_ptr->m_start_gl_context_state_ptr->projection_matrix);
     }
 
     if (this_ptr->m_recording_snapshot_ptr == nullptr)
