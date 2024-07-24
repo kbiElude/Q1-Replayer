@@ -83,7 +83,8 @@ std::array<uint32_t, 2> Replayer::get_q1_window_extents() const
 
 bool Replayer::init()
 {
-    m_replayer_snapshot_player_ptr = ReplayerSnapshotPlayer::create();
+    m_replayer_snapshot_logger_ptr = ReplayerSnapshotLogger::create();
+    m_replayer_snapshot_player_ptr = ReplayerSnapshotPlayer::create(m_replayer_snapshot_logger_ptr.get() );
     m_replayer_snapshotter_ptr     = ReplayerSnapshotter::create   (this);
     m_replayer_window_ptr          = ReplayerWindow::create        (get_q1_window_extents(),
                                                                     m_replayer_snapshotter_ptr.get    (),

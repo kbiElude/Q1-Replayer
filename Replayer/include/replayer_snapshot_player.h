@@ -9,6 +9,7 @@
 #include "replayer_snapshot.h"
 
 /* Forward decls */
+class                                           ReplayerSnapshotLogger;
 class                                           ReplayerSnapshotPlayer;
 typedef std::unique_ptr<ReplayerSnapshotPlayer> ReplayerSnapshotPlayerUniquePtr;
 
@@ -17,7 +18,7 @@ class ReplayerSnapshotPlayer
 {
 public:
     /* Public funcs */
-    static ReplayerSnapshotPlayerUniquePtr create();
+    static ReplayerSnapshotPlayerUniquePtr create(ReplayerSnapshotLogger* in_snapshot_logger_ptr);
 
     ~ReplayerSnapshotPlayer();
 
@@ -31,11 +32,12 @@ private:
     /* Private type defs */
 
     /* Private funcs */
-    ReplayerSnapshotPlayer();
+    ReplayerSnapshotPlayer(ReplayerSnapshotLogger* in_snapshot_logger_ptr);
 
     /* Private vars */
     GLIDToTexturePropsMapUniquePtr         m_snapshot_gl_id_to_texture_props_map_ptr;
     bool                                   m_snapshot_initialized;
+    ReplayerSnapshotLogger*                m_snapshot_logger_ptr;
     ReplayerSnapshotUniquePtr              m_snapshot_ptr;
     GLContextStateUniquePtr                m_snapshot_start_gl_context_state_ptr;
     std::unordered_map<uint32_t, uint32_t> m_snapshot_texture_gl_id_to_texture_gl_id_map;

@@ -6,6 +6,7 @@
 #define REPLAYER_H
 
 #include "replayer_types.h"
+#include "replayer_snapshot_logger.h"
 #include "replayer_snapshot_player.h"
 #include "replayer_snapshotter.h"
 #include "replayer_window.h"
@@ -41,6 +42,7 @@ private:
     // <--
 
     /* Private vars */
+    ReplayerSnapshotLoggerUniquePtr m_replayer_snapshot_logger_ptr;
     ReplayerSnapshotPlayerUniquePtr m_replayer_snapshot_player_ptr;
     ReplayerSnapshotterUniquePtr    m_replayer_snapshotter_ptr;
     ReplayerWindowUniquePtr         m_replayer_window_ptr;

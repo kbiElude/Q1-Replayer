@@ -3,6 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  */
 #include "OpenGL/globals.h"
+#include "replayer_snapshot_logger.h"
 #include "replayer_snapshot_player.h"
 #include <algorithm>
 
@@ -12,8 +13,9 @@
 #endif
 
 
-ReplayerSnapshotPlayer::ReplayerSnapshotPlayer()
-    :m_snapshot_initialized(false)
+ReplayerSnapshotPlayer::ReplayerSnapshotPlayer(ReplayerSnapshotLogger* in_snapshot_logger_ptr)
+    :m_snapshot_initialized(false),
+     m_snapshot_logger_ptr (in_snapshot_logger_ptr)
 {
     /* Stub */
 }
@@ -23,9 +25,9 @@ ReplayerSnapshotPlayer::~ReplayerSnapshotPlayer()
     /* Stub */
 }
 
-ReplayerSnapshotPlayerUniquePtr ReplayerSnapshotPlayer::create()
+ReplayerSnapshotPlayerUniquePtr ReplayerSnapshotPlayer::create(ReplayerSnapshotLogger* in_snapshot_logger_ptr)
 {
-    ReplayerSnapshotPlayerUniquePtr result_ptr(new ReplayerSnapshotPlayer() );
+    ReplayerSnapshotPlayerUniquePtr result_ptr(new ReplayerSnapshotPlayer(in_snapshot_logger_ptr) );
 
     assert(result_ptr != nullptr);
     return result_ptr;
@@ -60,6 +62,10 @@ void ReplayerSnapshotPlayer::load_snapshot(GLContextStateUniquePtr        in_sta
 
         m_snapshot_texture_gl_id_to_texture_gl_id_map.clear();
     }
+
+    m_snapshot_logger_ptr->log_snapshot(m_snapshot_start_gl_context_state_ptr.get    (),
+                                        m_snapshot_ptr.get(),
+                                        m_snapshot_gl_id_to_texture_props_map_ptr.get() );
 }
 
 void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_normalized)
