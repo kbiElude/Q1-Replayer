@@ -228,14 +228,6 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
 
             switch (api_command_ptr->api_func)
             {
-                case APIInterceptor::APIFUNCTION_GL_GLACCUM:
-                {
-                    reinterpret_cast<PFNGLACCUMPROC>(OpenGL::g_cached_gl_accum)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
-                                                                                api_command_ptr->api_arg_vec.at(1).value.value_fp32);
-
-                    break;
-                }
-
                 case APIInterceptor::APIFUNCTION_GL_GLALPHAFUNC:
                 {
                     reinterpret_cast<PFNGLALPHAFUNCPROC>(OpenGL::g_cached_gl_alpha_func)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
@@ -291,13 +283,6 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
                 case APIInterceptor::APIFUNCTION_GL_GLCLEARDEPTH:
                 {
                     reinterpret_cast<PFNGLCLEARDEPTHPROC>(OpenGL::g_cached_gl_clear_depth)(api_command_ptr->api_arg_vec.at(0).value.value_fp64);
-
-                    break;
-                }
-
-                case APIInterceptor::APIFUNCTION_GL_GLCLEARSTENCIL:
-                {
-                    reinterpret_cast<PFNGLCLEARSTENCILPROC>(OpenGL::g_cached_gl_clear_stencil)(api_command_ptr->api_arg_vec.at(0).value.value_i32);
 
                     break;
                 }

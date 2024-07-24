@@ -265,6 +265,8 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
             const auto target     = in_args_ptr[0].value.value_u32;
             const auto texture_id = in_args_ptr[1].value.value_u32;
 
+            AI_ASSERT(target == GL_TEXTURE_2D);
+
             this_ptr->m_current_context_state_ptr->bound_2d_texture_gl_id = texture_id;
             this_ptr->m_texture_target_to_bound_texture_id_map[target]    = texture_id;
         }
