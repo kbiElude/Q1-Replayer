@@ -62,9 +62,11 @@ struct GLContextState
     bool     depth_mask;
     double   depth_range[2]; // near, far
     uint32_t draw_buffer_mode;
+    uint32_t front_face_mode;
     uint32_t shade_model;
     uint32_t texture_env_mode;
 
+    uint32_t                                            bound_2d_texture_gl_id;
     std::unordered_map<uint32_t, GLContextTextureState> gl_texture_id_to_texture_state_map;
 
     GLContextState();

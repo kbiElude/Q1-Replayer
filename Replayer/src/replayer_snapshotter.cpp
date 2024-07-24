@@ -188,6 +188,13 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
             this_ptr->m_current_context_state_ptr->draw_buffer_mode = mode;
         }
         else
+        if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLFRONTFACE)
+        {
+            const auto mode = in_args_ptr[0].value.value_u32;
+
+            this_ptr->m_current_context_state_ptr->front_face_mode = mode;
+        }
+        else
         if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLSHADEMODEL)
         {
             const auto mode = in_args_ptr[0].value.value_u32;
@@ -219,7 +226,8 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
             const auto target     = in_args_ptr[0].value.value_u32;
             const auto texture_id = in_args_ptr[1].value.value_u32;
 
-            this_ptr->m_texture_target_to_bound_texture_id_map[target] = texture_id;
+            this_ptr->m_current_context_state_ptr->bound_2d_texture_gl_id = texture_id;
+            this_ptr->m_texture_target_to_bound_texture_id_map[target]    = texture_id;
         }
         else
         if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLDELETETEXTURES)

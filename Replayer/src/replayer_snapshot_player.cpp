@@ -115,9 +115,6 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
             }
         }
 
-        reinterpret_cast<PFNGLBINDTEXTUREPROC>(OpenGL::g_cached_gl_bind_texture)(GL_TEXTURE_2D,
-                                                                                 0);
-
         m_snapshot_initialized = true;
     }
 
@@ -165,6 +162,7 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
         reinterpret_cast<PFNGLDEPTHRANGEPROC>(OpenGL::g_cached_gl_depth_range)(m_snapshot_start_gl_context_state_ptr->depth_range[0],
                                                                                m_snapshot_start_gl_context_state_ptr->depth_range[1]);
         reinterpret_cast<PFNGLDRAWBUFFERPROC>(OpenGL::g_cached_gl_draw_buffer)(m_snapshot_start_gl_context_state_ptr->draw_buffer_mode);
+        reinterpret_cast<PFNGLFRONTFACEPROC> (OpenGL::g_cached_gl_front_face) (m_snapshot_start_gl_context_state_ptr->front_face_mode);
         reinterpret_cast<PFNGLSHADEMODELPROC>(OpenGL::g_cached_gl_shade_model)(m_snapshot_start_gl_context_state_ptr->shade_model);
         reinterpret_cast<PFNGLTEXENVFPROC>   (OpenGL::g_cached_gl_tex_env_f)  (GL_TEXTURE_ENV,
                                                                                GL_TEXTURE_ENV_MODE,
@@ -193,9 +191,15 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
                 pfn_gl_tex_parameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     static_cast<float>(texture_state.wrap_s)     );
                 pfn_gl_tex_parameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     static_cast<float>(texture_state.wrap_t)     );
             }
+        }
 
-            pfn_gl_bind_texture(GL_TEXTURE_2D,
-                                0);
+        {
+            auto       texture_mapping_iterator = m_snapshot_texture_gl_id_to_texture_gl_id_map.find(m_snapshot_start_gl_context_state_ptr->bound_2d_texture_gl_id);
+            const auto bound_2d_texture_gl_id   = (texture_mapping_iterator != m_snapshot_texture_gl_id_to_texture_gl_id_map.end() ) ? texture_mapping_iterator->second
+                                                                                                                                     : 0;
+
+            reinterpret_cast<PFNGLBINDTEXTUREPROC>(OpenGL::g_cached_gl_bind_texture)(GL_TEXTURE_2D,
+                                                                                     bound_2d_texture_gl_id);
         }
     }
 
