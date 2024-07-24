@@ -24,11 +24,12 @@ static void glfw_error_callback(int         error,
 ReplayerWindow::ReplayerWindow(const std::array<uint32_t, 2>& in_extents,
                                ReplayerSnapshotter*           in_snapshotter_ptr,
                                ReplayerSnapshotPlayer*        in_snapshot_player_ptr)
-    :m_extents               (in_extents),
-     m_snapshot_player_ptr   (in_snapshot_player_ptr),
-     m_snapshotter_ptr       (in_snapshotter_ptr),
-     m_window_ptr            (nullptr),
-     m_worker_thread_must_die(false)
+    :m_extents                      {in_extents.at(0), in_extents.at(1) + SCROLLBAR_HEIGHT},
+     m_replay_segment_end_normalized(1.0f),
+     m_snapshot_player_ptr          (in_snapshot_player_ptr),
+     m_snapshotter_ptr              (in_snapshotter_ptr),
+     m_window_ptr                   (nullptr),
+     m_worker_thread_must_die       (false)
 {
     /* Stub */
 }
@@ -135,28 +136,34 @@ void ReplayerWindow::execute()
     {
         glfwPollEvents();
 
-         /* If a snapshot has been captured, transfer it to the player */
-         {
-             GLIDToTexturePropsMapUniquePtr new_snapshot_gl_id_to_texture_props_map_ptr;
-             ReplayerSnapshotUniquePtr      new_snapshot_ptr;
-             GLContextStateUniquePtr        new_snapshot_start_gl_context_state_ptr;
-
-             if (m_snapshotter_ptr->pop_snapshot(&new_snapshot_start_gl_context_state_ptr,
-                                                 &new_snapshot_ptr,
-                                                 &new_snapshot_gl_id_to_texture_props_map_ptr) )
-             {
-                 m_snapshot_player_ptr->load_snapshot(std::move(new_snapshot_start_gl_context_state_ptr),
-                                                      std::move(new_snapshot_ptr),
-                                                      std::move(new_snapshot_gl_id_to_texture_props_map_ptr) );
-             }
-         }
-
-        if (m_snapshot_player_ptr->is_snapshot_loaded() )
+        /* If a snapshot has been captured, transfer it to the player */
         {
-            m_snapshot_player_ptr->play_snapshot();
+            GLIDToTexturePropsMapUniquePtr new_snapshot_gl_id_to_texture_props_map_ptr;
+            ReplayerSnapshotUniquePtr      new_snapshot_ptr;
+            GLContextStateUniquePtr        new_snapshot_start_gl_context_state_ptr;
+
+            if (m_snapshotter_ptr->pop_snapshot(&new_snapshot_start_gl_context_state_ptr,
+                                                &new_snapshot_ptr,
+                                                &new_snapshot_gl_id_to_texture_props_map_ptr) )
+            {
+                m_snapshot_player_ptr->load_snapshot(std::move(new_snapshot_start_gl_context_state_ptr),
+                                                     std::move(new_snapshot_ptr),
+                                                     std::move(new_snapshot_gl_id_to_texture_props_map_ptr) );
+            }
         }
-        else
+
         {
+            const auto is_snapshot_loaded = m_snapshot_player_ptr->is_snapshot_loaded();
+
+            if (is_snapshot_loaded)
+            {
+                m_snapshot_player_ptr->play_snapshot(m_replay_segment_end_normalized);
+            }
+            else
+            {
+                glClear(GL_COLOR_BUFFER_BIT);
+            }
+
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame   ();
 
@@ -169,20 +176,44 @@ void ReplayerWindow::execute()
                                       &display_w,
                                       &display_h);
 
-                ImGui::Begin("Hello.", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+                if (!is_snapshot_loaded)
                 {
-                    const auto window_size = ImGui::GetWindowSize();
+                    ImGui::Begin("Hello.", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+                    {
+                        const auto window_size = ImGui::GetWindowSize();
 
-                    ImGui::Text("Press F11 to capture a frame for replay.");
+                        ImGui::Text("Press F11 to capture a frame for replay.");
 
-                    ImGui::SetWindowPos(ImVec2( (display_w - window_size.x) / 2,
-                                                (display_h - window_size.y) / 2) );
+                        ImGui::SetWindowPos(ImVec2( (display_w - window_size.x) / 2,
+                                                    (display_h - window_size.y) / 2) );
+                    }
+                    ImGui::End();
                 }
-                ImGui::End   ();
-                ImGui::Render();
+                else
+                {
+                    glDisable(GL_ALPHA_TEST);
+                    glDisable(GL_DEPTH_TEST);
+                    glDisable(GL_SCISSOR_TEST);
+                    glDisable(GL_TEXTURE_2D);
 
-                glClear(GL_COLOR_BUFFER_BIT);
+                    ImGui::Begin("Hello.",
+                                 nullptr,
+                                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+                    {
+                        ImGui::PushItemWidth(-1);
+                        ImGui::SliderFloat  ("##Slider",
+                                            &m_replay_segment_end_normalized,
+                                             0.0f,
+                                             1.0f);
+                        ImGui::PopItemWidth ();
 
+                        ImGui::SetWindowPos (ImVec2(0,         0) );
+                        ImGui::SetWindowSize(ImVec2(display_w, SCROLLBAR_HEIGHT) );
+                    }
+                    ImGui::End();
+                }
+
+                ImGui::Render                   ();
                 ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData() );
             }
         }

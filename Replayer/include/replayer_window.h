@@ -20,6 +20,7 @@ class ReplayerWindow
 {
 public:
     /* Public consts */
+    static const uint32_t SCROLLBAR_HEIGHT = 32;
 
     /* Public funcs */
     ~ReplayerWindow();
@@ -41,6 +42,7 @@ private:
 
     /* Private vars */
     const std::array<uint32_t, 2> m_extents;
+    float                         m_replay_segment_end_normalized;
 
     ReplayerSnapshotPlayer* m_snapshot_player_ptr;
     ReplayerSnapshotter*    m_snapshotter_ptr;

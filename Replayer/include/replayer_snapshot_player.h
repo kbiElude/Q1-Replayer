@@ -25,7 +25,7 @@ public:
     void load_snapshot     (GLContextStateUniquePtr        in_start_context_state_ptr,
                             ReplayerSnapshotUniquePtr      in_snapshot_ptr,
                             GLIDToTexturePropsMapUniquePtr in_snapshot_gl_id_to_texture_props_map_ptr);
-    void play_snapshot     ();
+    void play_snapshot     (const float&                   in_playback_segment_end_normalized);
 
 private:
     /* Private type defs */

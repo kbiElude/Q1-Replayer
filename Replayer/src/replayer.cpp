@@ -5,6 +5,7 @@
 #include "APIInterceptor/include/Common/callbacks.h"
 #include "replayer.h"
 #include "replayer_snapshotter.h"
+#include "replayer_window.h"
 #include <assert.h>
 
 HHOOK      g_keyboard_hook = 0;
@@ -146,27 +147,36 @@ void Replayer::reposition_windows()
                    &q1_window_rect);
 
     /* Q1 window goes on top */
-    const auto desktop_width    = ::GetSystemMetrics(SM_CXSCREEN);
-    const auto desktop_height   = ::GetSystemMetrics(SM_CYSCREEN);
-    const auto q1_window_width  = q1_window_rect.right - q1_window_rect.left;
-    const auto q1_window_height = q1_window_rect.bottom - q1_window_rect.top;
+    const auto caption_height         = ::GetSystemMetrics(SM_CYCAPTION);
+    const auto desktop_width          = ::GetSystemMetrics(SM_CXSCREEN);
+    const auto desktop_height         = ::GetSystemMetrics(SM_CYSCREEN);
+    const auto frame_height           = ::GetSystemMetrics(SM_CYFRAME);
+    const auto q1_window_width        = q1_window_rect.right - q1_window_rect.left;
+    const auto q1_window_height       = q1_window_rect.bottom - q1_window_rect.top;
+    const auto replayer_window_width  = q1_window_width;
+    const auto replayer_window_height = q1_window_height + ReplayerWindow::SCROLLBAR_HEIGHT;
 
-    ::SetWindowPos(m_q1_hwnd,
-                   HWND_DESKTOP,
-                   (desktop_width - q1_window_width)  / 2,
-                   0,
-                   q1_window_width,
-                   q1_window_height,
-                   SWP_SHOWWINDOW);
-
-    /* Replayer windows goes to the bottom */
     {
-        const std::array<uint32_t, 2> new_x1y1 =
-        {
-            static_cast<uint32_t>( (desktop_width  - q1_window_width)  / 2),
-            static_cast<uint32_t>( (desktop_height - q1_window_height)    )
-        };
+        const auto q1_window_x = (desktop_width  - q1_window_width)                           / 2;
+        const auto q1_window_y = (desktop_height - replayer_window_height - q1_window_height) / 2;
 
-        m_replayer_window_ptr->set_position(new_x1y1);
+        ::SetWindowPos(m_q1_hwnd,
+                       HWND_DESKTOP,
+                       q1_window_x,
+                       q1_window_y,
+                       q1_window_width,
+                       q1_window_height,
+                       SWP_SHOWWINDOW);
+
+        /* Glue replayer windows right underneath Q1 window */
+        {
+            const std::array<uint32_t, 2> new_x1y1 =
+            {
+                static_cast<uint32_t>(q1_window_x),
+                static_cast<uint32_t>(q1_window_y + q1_window_height + caption_height + frame_height),
+            };
+
+            m_replayer_window_ptr->set_position(new_x1y1);
+        }
     }
 }
