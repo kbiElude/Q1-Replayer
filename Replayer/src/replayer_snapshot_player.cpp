@@ -157,6 +157,7 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
                                                                                m_snapshot_start_gl_context_state_ptr->clear_color[2],
                                                                                m_snapshot_start_gl_context_state_ptr->clear_color[3]);
         reinterpret_cast<PFNGLCLEARDEPTHPROC>(OpenGL::g_cached_gl_clear_depth)(m_snapshot_start_gl_context_state_ptr->clear_depth);
+        reinterpret_cast<PFNGLCULLFACEPROC>  (OpenGL::g_cached_gl_cull_face)  (m_snapshot_start_gl_context_state_ptr->cull_face_mode);
         reinterpret_cast<PFNGLDEPTHFUNCPROC> (OpenGL::g_cached_gl_depth_func) (m_snapshot_start_gl_context_state_ptr->depth_func);
         reinterpret_cast<PFNGLDEPTHMASKPROC> (OpenGL::g_cached_gl_depth_mask) (m_snapshot_start_gl_context_state_ptr->depth_mask);
         reinterpret_cast<PFNGLDEPTHRANGEPROC>(OpenGL::g_cached_gl_depth_range)(m_snapshot_start_gl_context_state_ptr->depth_range[0],
@@ -220,13 +221,6 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
                 {
                     reinterpret_cast<PFNGLACCUMPROC>(OpenGL::g_cached_gl_accum)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
                                                                                 api_command_ptr->api_arg_vec.at(1).value.value_fp32);
-
-                    break;
-                }
-
-                case APIInterceptor::APIFUNCTION_GL_GLACTIVETEXTURE:
-                {
-                    reinterpret_cast<PFNGLACTIVETEXTUREPROC>(OpenGL::g_cached_gl_active_texture)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
 
                     break;
                 }

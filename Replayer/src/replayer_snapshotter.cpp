@@ -158,6 +158,13 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
             this_ptr->m_current_context_state_ptr->clear_depth = depth;
         }
         else
+        if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLCULLFACE)
+        {
+            const auto mode = in_args_ptr[0].value.value_u32;
+
+            this_ptr->m_current_context_state_ptr->cull_face_mode = mode;
+        }
+        else
         if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLDEPTHFUNC)
         {
             const auto func = in_args_ptr[0].value.value_u32;

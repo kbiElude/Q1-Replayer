@@ -18,6 +18,7 @@ GLContextState::GLContextState()
     clear_color[2]         = 0.0f;
     clear_color[3]         = 0.0f;
     clear_depth            = 1.0;
+    cull_face_mode         = GL_BACK;
     depth_func             = GL_LESS;
     depth_mask             = true;
     depth_range[0]         = 0.0f;

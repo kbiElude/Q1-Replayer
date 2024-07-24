@@ -58,6 +58,7 @@ struct GLContextState
     uint32_t blend_func_sfactor;
     float    clear_color[4];
     double   clear_depth;
+    uint32_t cull_face_mode;
     uint32_t depth_func;
     bool     depth_mask;
     double   depth_range[2]; // near, far
