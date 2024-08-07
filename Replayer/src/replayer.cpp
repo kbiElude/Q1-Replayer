@@ -110,8 +110,7 @@ bool Replayer::init()
 {
     m_replayer_apicall_window_ptr  = ReplayerAPICallWindow::create ();
     m_replayer_snapshot_logger_ptr = ReplayerSnapshotLogger::create();
-    m_replayer_snapshot_player_ptr = ReplayerSnapshotPlayer::create(m_replayer_snapshot_logger_ptr.get(),
-                                                                    this);
+    m_replayer_snapshot_player_ptr = ReplayerSnapshotPlayer::create(this);
     m_replayer_snapshotter_ptr     = ReplayerSnapshotter::create   (this);
     m_replayer_window_ptr          = ReplayerWindow::create        (get_q1_window_extents             (),
                                                                     this,
@@ -183,6 +182,10 @@ void Replayer::on_snapshot_available() const
                                                      &this_ptr->m_snapshot_prev_frame_depth_data_u8_vec_ptr);
         }
         m_replayer_snapshot_player_ptr->unlock_for_snapshot_access();
+
+        m_replayer_snapshot_logger_ptr->log_snapshot(this_ptr->m_snapshot_start_gl_context_state_ptr.get    (),
+                                                     this_ptr->m_snapshot_ptr.get                           (),
+                                                     this_ptr->m_snapshot_gl_id_to_texture_props_map_ptr.get() );
 
         ++this_ptr->m_n_snapshot;
     }

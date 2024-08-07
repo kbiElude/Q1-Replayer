@@ -19,8 +19,7 @@ class ReplayerSnapshotPlayer
 {
 public:
     /* Public funcs */
-    static ReplayerSnapshotPlayerUniquePtr create(ReplayerSnapshotLogger* in_snapshot_logger_ptr,
-                                                  const Replayer*         in_replayer_ptr);
+    static ReplayerSnapshotPlayerUniquePtr create(const Replayer* in_replayer_ptr);
 
     ~ReplayerSnapshotPlayer();
 
@@ -37,15 +36,13 @@ private:
     /* Private type defs */
 
     /* Private funcs */
-    ReplayerSnapshotPlayer(ReplayerSnapshotLogger* in_snapshot_logger_ptr,
-                           const Replayer*         in_replayer_ptr);
+    ReplayerSnapshotPlayer(const Replayer* in_replayer_ptr);
 
     /* Private vars */
     std::mutex m_mutex;
 
     const Replayer*         m_replayer_ptr;
     bool                    m_snapshot_initialized;
-    ReplayerSnapshotLogger* m_snapshot_logger_ptr;
 
     const ReplayerSnapshot*      m_snapshot_ptr;
     const GLIDToTexturePropsMap* m_snapshot_gl_id_to_texture_props_map_ptr;

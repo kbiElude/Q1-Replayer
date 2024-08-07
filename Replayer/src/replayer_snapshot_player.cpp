@@ -14,11 +14,9 @@
 #endif
 
 
-ReplayerSnapshotPlayer::ReplayerSnapshotPlayer(ReplayerSnapshotLogger* in_snapshot_logger_ptr,
-                                               const Replayer*         in_replayer_ptr)
+ReplayerSnapshotPlayer::ReplayerSnapshotPlayer(const Replayer* in_replayer_ptr)
     :m_replayer_ptr        (in_replayer_ptr),
-     m_snapshot_initialized(false),
-     m_snapshot_logger_ptr (in_snapshot_logger_ptr)
+     m_snapshot_initialized(false)
 {
     /* Stub */
 }
@@ -28,11 +26,9 @@ ReplayerSnapshotPlayer::~ReplayerSnapshotPlayer()
     /* Stub */
 }
 
-ReplayerSnapshotPlayerUniquePtr ReplayerSnapshotPlayer::create(ReplayerSnapshotLogger* in_snapshot_logger_ptr,
-                                                               const Replayer*         in_replayer_ptr)
+ReplayerSnapshotPlayerUniquePtr ReplayerSnapshotPlayer::create(const Replayer* in_replayer_ptr)
 {
-    ReplayerSnapshotPlayerUniquePtr result_ptr(new ReplayerSnapshotPlayer(in_snapshot_logger_ptr,
-                                                                          in_replayer_ptr) );
+    ReplayerSnapshotPlayerUniquePtr result_ptr(new ReplayerSnapshotPlayer(in_replayer_ptr) );
 
     assert(result_ptr != nullptr);
     return result_ptr;
@@ -69,10 +65,6 @@ void ReplayerSnapshotPlayer::load_snapshot(const GLContextState*        in_start
 
         m_snapshot_texture_gl_id_to_texture_gl_id_map.clear();
     }
-
-    m_snapshot_logger_ptr->log_snapshot(m_snapshot_start_gl_context_state_ptr,
-                                        m_snapshot_ptr,
-                                        m_snapshot_gl_id_to_texture_props_map_ptr);
 }
 
 void ReplayerSnapshotPlayer::lock_for_snapshot_access()
