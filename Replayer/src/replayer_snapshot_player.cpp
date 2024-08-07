@@ -151,7 +151,7 @@ void ReplayerSnapshotPlayer::play_snapshot()
 
             if (api_command_ptr->api_func == APIInterceptor::APIFUNCTION_GL_GLDEPTHFUNC)
             {
-                frame_depth_func = m_snapshot_ptr->get_api_command_ptr(0)->api_arg_vec.at(n_api_command).get_u32();
+                frame_depth_func = m_snapshot_ptr->get_api_command_ptr(n_api_command)->api_arg_vec.at(n_api_command).get_u32();
 
                 break;
             }
