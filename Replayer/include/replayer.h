@@ -6,15 +6,18 @@
 #define REPLAYER_H
 
 #include "replayer_types.h"
+#include "replayer_apicall_window.h"
 #include "replayer_snapshot_logger.h"
 #include "replayer_snapshot_player.h"
 #include "replayer_snapshotter.h"
 #include "replayer_window.h"
 
+/* Global mutexes */
+extern std::mutex g_imgui_mutex;
+
 /* Forward decls */
 class                             Replayer;
 typedef std::unique_ptr<Replayer> ReplayerUniquePtr;
-
 
 class Replayer
 {
@@ -25,6 +28,7 @@ public:
     ~Replayer();
 
     std::array<uint32_t, 2> get_q1_window_extents() const;
+    void                    on_snapshot_available() const;
     void                    on_snapshot_requested();
 
 private:
@@ -42,6 +46,7 @@ private:
     // <--
 
     /* Private vars */
+    ReplayerAPICallWindowUniquePtr  m_replayer_apicall_window_ptr;
     ReplayerSnapshotLoggerUniquePtr m_replayer_snapshot_logger_ptr;
     ReplayerSnapshotPlayerUniquePtr m_replayer_snapshot_player_ptr;
     ReplayerSnapshotterUniquePtr    m_replayer_snapshotter_ptr;

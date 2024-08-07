@@ -4,13 +4,21 @@
  */
 #include "APIInterceptor/include/Common/callbacks.h"
 #include "replayer.h"
+#include "replayer_apicall_window.h"
 #include "replayer_snapshotter.h"
 #include "replayer_window.h"
 #include <assert.h>
 
+std::mutex g_imgui_mutex;
 HHOOK      g_keyboard_hook = 0;
 Replayer*  g_replayer_ptr  = nullptr;
 
+#ifdef max
+    #undef max
+#endif
+#ifdef min
+    #undef min
+#endif
 
 LRESULT CALLBACK on_keyboard_event(int    code,
                                    WPARAM wParam,
@@ -83,6 +91,7 @@ std::array<uint32_t, 2> Replayer::get_q1_window_extents() const
 
 bool Replayer::init()
 {
+    m_replayer_apicall_window_ptr  = ReplayerAPICallWindow::create ();
     m_replayer_snapshot_logger_ptr = ReplayerSnapshotLogger::create();
     m_replayer_snapshot_player_ptr = ReplayerSnapshotPlayer::create(m_replayer_snapshot_logger_ptr.get(),
                                                                     this);
@@ -143,6 +152,11 @@ void Replayer::on_q1_wglmakecurrent(APIInterceptor::APIFunction                i
     }
 }
 
+void Replayer::on_snapshot_available() const
+{
+    m_replayer_window_ptr->refresh();
+}
+
 void Replayer::on_snapshot_requested()
 {
     m_replayer_snapshotter_ptr->cache_snapshot();
@@ -156,6 +170,8 @@ void Replayer::reposition_windows()
                    &q1_window_rect);
 
     /* Q1 window goes on top */
+    static const uint32_t APICALL_WINDOW_WIDTH = 600;
+
     const auto caption_height         = ::GetSystemMetrics(SM_CYCAPTION);
     const auto desktop_width          = ::GetSystemMetrics(SM_CXSCREEN);
     const auto desktop_height         = ::GetSystemMetrics(SM_CYSCREEN);
@@ -163,12 +179,11 @@ void Replayer::reposition_windows()
     const auto q1_window_width        = q1_window_rect.right - q1_window_rect.left;
     const auto q1_window_height       = q1_window_rect.bottom - q1_window_rect.top;
     const auto replayer_window_width  = q1_window_width;
-    const auto replayer_window_height = q1_window_height + ReplayerWindow::SCROLLBAR_HEIGHT;
+    const auto replayer_window_height = q1_window_height;
+    const auto q1_window_x            = (desktop_width  - q1_window_width - APICALL_WINDOW_WIDTH) / 2;
+    const auto q1_window_y            = (desktop_height - replayer_window_height - q1_window_height)  / 2;
 
     {
-        const auto q1_window_x = (desktop_width  - q1_window_width)                           / 2;
-        const auto q1_window_y = (desktop_height - replayer_window_height - q1_window_height) / 2;
-
         ::SetWindowPos(m_q1_hwnd,
                        HWND_DESKTOP,
                        q1_window_x,
@@ -177,7 +192,7 @@ void Replayer::reposition_windows()
                        q1_window_height,
                        SWP_SHOWWINDOW);
 
-        /* Glue replayer windows right underneath Q1 window */
+        /* Glue replayer window right underneath Q1 window */
         {
             const std::array<uint32_t, 2> new_x1y1 =
             {
@@ -186,6 +201,23 @@ void Replayer::reposition_windows()
             };
 
             m_replayer_window_ptr->set_position(new_x1y1);
+        }
+
+        /* API call window goes to the right */
+        {
+            const std::array<uint32_t, 2> new_x1y1 =
+            {
+                static_cast<uint32_t>(q1_window_x + q1_window_width),
+                static_cast<uint32_t>(q1_window_y + caption_height + frame_height),
+            };
+            const std::array<uint32_t, 2> new_extents =
+            {
+                APICALL_WINDOW_WIDTH,
+                static_cast<uint32_t>(q1_window_height + replayer_window_height),
+            };
+
+            m_replayer_apicall_window_ptr->set_position(new_x1y1,
+                                                        new_extents);
         }
     }
 }

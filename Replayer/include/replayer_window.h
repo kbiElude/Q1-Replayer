@@ -20,11 +20,10 @@ class ReplayerWindow
 {
 public:
     /* Public consts */
-    static const uint32_t SCROLLBAR_HEIGHT = 32;
-
     /* Public funcs */
     ~ReplayerWindow();
 
+    void refresh     ();
     void set_position(const std::array<uint32_t, 2>& in_x1y1);
 
     static ReplayerWindowUniquePtr create(const std::array<uint32_t, 2>& in_extents,

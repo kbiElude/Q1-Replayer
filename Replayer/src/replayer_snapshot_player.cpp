@@ -134,12 +134,12 @@ void ReplayerSnapshotPlayer::play_snapshot(const uint32_t& in_n_last_api_command
     }
 
     /* Fill depth buffer with data cached from the preceding frame.. */
-    reinterpret_cast<PFNGLCLEARPROC>(OpenGL::g_cached_gl_clear)(GL_COLOR_BUFFER_BIT);
+    reinterpret_cast<PFNGLDRAWBUFFERPROC>(OpenGL::g_cached_gl_draw_buffer)(GL_BACK);
+    reinterpret_cast<PFNGLCLEARPROC>     (OpenGL::g_cached_gl_clear)      (GL_COLOR_BUFFER_BIT);
 
     {
         const auto q1_window_extents = m_replayer_ptr->get_q1_window_extents();
 
-        reinterpret_cast<PFNGLDRAWBUFFERPROC> (OpenGL::g_cached_gl_draw_buffer) (GL_BACK);
         reinterpret_cast<PFNGLPIXELSTOREIPROC>(OpenGL::g_cached_gl_pixel_storei)(GL_UNPACK_ALIGNMENT,
                                                                                  1);
         reinterpret_cast<PFNGLDRAWPIXELSPROC> (OpenGL::g_cached_gl_draw_pixels) (q1_window_extents.at(0),

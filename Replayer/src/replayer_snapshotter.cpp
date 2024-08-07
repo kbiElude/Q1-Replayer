@@ -11,9 +11,6 @@
 #include "replayer.h"
 
 
-std::mutex g_world_mutex;
-
-
 ReplayerSnapshotter::ReplayerSnapshotter(const Replayer* in_replayer_ptr)
     :m_is_glbegin_active (false),
      m_replayer_ptr      (in_replayer_ptr),
@@ -29,7 +26,7 @@ ReplayerSnapshotter::~ReplayerSnapshotter()
 
 void ReplayerSnapshotter::cache_snapshot()
 {
-    std::lock_guard<std::mutex> lock(g_world_mutex);
+    std::lock_guard<std::mutex> lock(m_mutex);
 
     m_snapshot_requested = true;
 }
@@ -82,8 +79,8 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
                                                const APIInterceptor::APIFunctionArgument* in_args_ptr,
                                                void*                                      in_user_arg_ptr)
 {
-    std::lock_guard<std::mutex> lock    (g_world_mutex);
     auto                        this_ptr(reinterpret_cast<ReplayerSnapshotter*>(in_user_arg_ptr) );
+    std::lock_guard<std::mutex> lock    (this_ptr->m_mutex);
 
     if (this_ptr->m_start_gl_context_state_ptr == nullptr)
     {
@@ -473,6 +470,8 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
             this_ptr->m_cached_snapshot_ptr               = std::move(this_ptr->m_recording_snapshot_ptr);
             this_ptr->m_cached_start_gl_context_state_ptr = std::move(this_ptr->m_start_gl_context_state_ptr);
             this_ptr->m_snapshot_requested                = false;
+
+            this_ptr->m_replayer_ptr->on_snapshot_available();
         }
         else
         {
@@ -518,7 +517,7 @@ bool ReplayerSnapshotter::pop_snapshot(GLContextStateUniquePtr*        out_start
                                        GLIDToTexturePropsMapUniquePtr* out_gl_id_to_texture_props_map_ptr_ptr,
                                        U8VecUniquePtr*                 out_prev_frame_depth_data_u8_vec_ptr_ptr)
 {
-    std::lock_guard<std::mutex> lock  (g_world_mutex);
+    std::lock_guard<std::mutex> lock  (m_mutex);
     bool                        result(false);
 
     if (m_snapshot_requested == false)

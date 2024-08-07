@@ -54,6 +54,7 @@ private:
     GLContextStateUniquePtr        m_cached_start_gl_context_state_ptr;
 
     bool                      m_is_glbegin_active;
+    std::mutex                m_mutex;
     ReplayerSnapshotUniquePtr m_recording_snapshot_ptr;
     bool                      m_snapshot_requested;
 

@@ -10,8 +10,6 @@
 #include "Common/logger.h"
 #include "glfw/glfw3.h"
 #include "glfw/glfw3native.h"
-#include "imgui/backends/imgui_impl_glfw.h"
-#include "imgui/backends/imgui_impl_opengl3.h"
 #include <assert.h>
 
 
@@ -24,7 +22,7 @@ static void glfw_error_callback(int         error,
 ReplayerWindow::ReplayerWindow(const std::array<uint32_t, 2>& in_extents,
                                ReplayerSnapshotter*           in_snapshotter_ptr,
                                ReplayerSnapshotPlayer*        in_snapshot_player_ptr)
-    :m_extents                      {in_extents.at(0), in_extents.at(1) + SCROLLBAR_HEIGHT},
+    :m_extents                      (in_extents),
      m_n_last_api_command_to_execute(0),
      m_snapshot_player_ptr          (in_snapshot_player_ptr),
      m_snapshotter_ptr              (in_snapshotter_ptr),
@@ -102,40 +100,17 @@ void ReplayerWindow::execute()
         goto end;
     }
 
+    glfwSetWindowRefreshCallback(m_window_ptr,
+                                 [](GLFWwindow* /* in_window_ptr */) { glfwPostEmptyEvent(); });
+
     glfwMakeContextCurrent(m_window_ptr);
     glfwSwapInterval      (1); // Enable vsync
-
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-
-    ImGui::CreateContext();
-
-    {
-        ImGuiIO& io = ImGui::GetIO();
-
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-        io.IniFilename  = nullptr;
-    }
-
-    ImGui::StyleColorsDark();
-
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(m_window_ptr,
-                                 true); /* install_callbacks */
-
-    #ifdef __EMSCRIPTEN__
-    {
-        ImGui_ImplGlfw_InstallEmscriptenCanvasResizeCallback("#canvas");
-    }
-    #endif
-
-    ImGui_ImplOpenGL3_Init("#version 100");
 
     // Main loop
     while (!glfwWindowShouldClose(m_window_ptr) &&
            !m_worker_thread_must_die)
     {
-        glfwPollEvents();
+        glfwWaitEventsTimeout(0.5); /* timeout; 0.5 = half a second */
 
         /* If a snapshot has been captured, transfer it to the player */
         {
@@ -169,74 +144,21 @@ void ReplayerWindow::execute()
             {
                 glClear(GL_COLOR_BUFFER_BIT);
             }
-
-            ImGui_ImplOpenGL3_NewFrame();
-            ImGui_ImplGlfw_NewFrame   ();
-
-            ImGui::NewFrame();
-            {
-                int display_h = 0;
-                int display_w = 0;
-
-                glfwGetFramebufferSize(m_window_ptr,
-                                      &display_w,
-                                      &display_h);
-
-                if (!is_snapshot_loaded)
-                {
-                    ImGui::Begin("Hello.", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-                    {
-                        const auto window_size = ImGui::GetWindowSize();
-
-                        ImGui::Text("Press F11 to capture a frame for replay.");
-
-                        ImGui::SetWindowPos(ImVec2( (display_w - window_size.x) / 2,
-                                                    (display_h - window_size.y) / 2) );
-                    }
-                    ImGui::End();
-                }
-                else
-                {
-                    glDisable(GL_ALPHA_TEST);
-                    glDisable(GL_DEPTH_TEST);
-                    glDisable(GL_SCISSOR_TEST);
-                    glDisable(GL_TEXTURE_2D);
-
-                    ImGui::Begin("Hello.",
-                                 nullptr,
-                                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-                    {
-                        ImGui::PushItemWidth(-1);
-                        ImGui::SliderInt   ("##Slider",
-                                            &m_n_last_api_command_to_execute,
-                                             0,
-                                             m_snapshot_player_ptr->get_current_snapshot_ptr()->get_n_api_commands() );
-                        ImGui::PopItemWidth ();
-
-                        ImGui::SetWindowPos (ImVec2(0,                             0) );
-                        ImGui::SetWindowSize(ImVec2(static_cast<float>(display_w), SCROLLBAR_HEIGHT) );
-                    }
-                    ImGui::End();
-                }
-
-                ImGui::Render                   ();
-                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData() );
-            }
         }
 
         glfwSwapBuffers(m_window_ptr);
     }
-
-    // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown   ();
-    ImGui::DestroyContext     ();
 
     glfwDestroyWindow(m_window_ptr);
     glfwTerminate    ();
 
 end:
     ;
+}
+
+void ReplayerWindow::refresh()
+{
+    glfwPostEmptyEvent();
 }
 
 void ReplayerWindow::set_position(const std::array<uint32_t, 2>& in_x1y1)
