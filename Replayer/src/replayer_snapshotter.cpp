@@ -479,14 +479,6 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
         /* Cache depth buffer's contents for next frame's reuse. */
         reinterpret_cast<PFNGLPIXELSTOREIPROC>(OpenGL::g_cached_gl_pixel_storei)(GL_PACK_ALIGNMENT,   1);
         reinterpret_cast<PFNGLPIXELSTOREIPROC>(OpenGL::g_cached_gl_pixel_storei)(GL_UNPACK_ALIGNMENT, 1);
-
-        reinterpret_cast<PFNGLREADPIXELSPROC>(OpenGL::g_cached_gl_read_pixels)(0,
-                                                                               0,
-                                                                               this_ptr->m_current_context_state_ptr->viewport_extents[0],
-                                                                               this_ptr->m_current_context_state_ptr->viewport_extents[1],
-                                                                               GL_DEPTH_COMPONENT,
-                                                                               GL_FLOAT,
-                                                                               this_ptr->m_prev_frame_depth_buffer_u8_vec_ptr->data() );
     }
 
     if (in_api_func == APIInterceptor::APIFUNCTION_GL_GLBEGIN)

@@ -214,10 +214,12 @@ void Replayer::on_snapshot_available() const
             /* Reinitialize API call window with the new snapshot */
             m_replayer_apicall_window_ptr->load_snapshot(this_ptr->m_snapshot_ptr.get() );
 
+#if 0
             /* While we're at it, log the snapshot's contents to a dump file.. */
             m_replayer_snapshot_logger_ptr->log_snapshot(this_ptr->m_snapshot_start_gl_context_state_ptr.get    (),
                                                          this_ptr->m_snapshot_ptr.get                           (),
                                                          this_ptr->m_snapshot_gl_id_to_texture_props_map_ptr.get() );
+#endif
 
             ++this_ptr->m_n_snapshot;
         }
@@ -230,6 +232,11 @@ void Replayer::on_snapshot_available() const
 void Replayer::on_snapshot_requested()
 {
     m_replayer_snapshotter_ptr->cache_snapshot();
+}
+
+void Replayer::refresh_windows()
+{
+    m_replayer_window_ptr->refresh();
 }
 
 void Replayer::reposition_windows()

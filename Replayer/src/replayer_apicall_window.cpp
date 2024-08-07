@@ -20,7 +20,7 @@ static void glfw_error_callback(int         error,
     assert(false && "GLFW error callback received");
 }
 
-ReplayerAPICallWindow::ReplayerAPICallWindow(const Replayer* in_replayer_ptr)
+ReplayerAPICallWindow::ReplayerAPICallWindow(Replayer* in_replayer_ptr)
     :m_replayer_ptr          (in_replayer_ptr),
      m_snapshot_ptr          (nullptr),
      m_window_ptr            (nullptr),
@@ -36,7 +36,7 @@ ReplayerAPICallWindow::~ReplayerAPICallWindow()
     m_worker_thread.join();
 }
 
-ReplayerAPICallWindowUniquePtr ReplayerAPICallWindow::create(const Replayer* in_replayer_ptr)
+ReplayerAPICallWindowUniquePtr ReplayerAPICallWindow::create(Replayer* in_replayer_ptr)
 {
     ReplayerAPICallWindowUniquePtr result_ptr(
         new ReplayerAPICallWindow(in_replayer_ptr)
@@ -160,6 +160,7 @@ void ReplayerAPICallWindow::execute()
                             ImGui::BeginListBox("##",
                                                 ImVec2(static_cast<float>(display_w - 10), static_cast<float>(api_call_listbox_height) ));
                             {
+                                bool       command_adjusted         = false;
                                 auto       command_enabled_bool_ptr = reinterpret_cast<bool*>(m_replayer_ptr->get_current_snapshot_command_enabled_bool_as_u8_vec_ptr()->data() );
                                 const auto n_api_commands           = static_cast<uint32_t>  (m_api_command_vec.size                                                 ()         );
 
@@ -167,9 +168,17 @@ void ReplayerAPICallWindow::execute()
                                               n_api_command < n_api_commands;
                                             ++n_api_command)
                                 {
-                                    ImGui::Checkbox ("##",                                         command_enabled_bool_ptr + n_api_command);
+                                    command_adjusted |= ImGui::Checkbox("##",
+                                                                        command_enabled_bool_ptr + n_api_command);
                                     ImGui::SameLine ();
-                                    ImGui::Selectable(m_api_command_vec.at(n_api_command).c_str(), command_enabled_bool_ptr + n_api_command);
+
+                                    command_adjusted |= ImGui::Selectable(m_api_command_vec.at(n_api_command).c_str(),
+                                                                          command_enabled_bool_ptr + n_api_command);
+                                }
+
+                                if (command_adjusted)
+                                {
+                                    m_replayer_ptr->refresh_windows();
                                 }
                             }
                             ImGui::EndListBox();

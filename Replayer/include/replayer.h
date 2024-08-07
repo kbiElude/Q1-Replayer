@@ -38,6 +38,7 @@ public:
     std::array<uint32_t, 2> get_q1_window_extents () const;
     void                    on_snapshot_available () const;
     void                    on_snapshot_requested ();
+    void                    refresh_windows       ();
 
 private:
     /* Private funcs */

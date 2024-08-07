@@ -140,19 +140,22 @@ void ReplayerSnapshotPlayer::play_snapshot()
     }
 
     /* Fill depth buffer with data cached from the preceding frame.. */
-    reinterpret_cast<PFNGLDRAWBUFFERPROC>(OpenGL::g_cached_gl_draw_buffer)(GL_BACK);
-    reinterpret_cast<PFNGLCLEARPROC>     (OpenGL::g_cached_gl_clear)      (GL_COLOR_BUFFER_BIT);
-
     {
-        const auto q1_window_extents = m_replayer_ptr->get_q1_window_extents();
+        // NOTE: Handle gl_ztrick correctly by looking at the depth function set at the beginning of the frame.
+        //
+        // Boy am I glad we no longer need to resort to such devilish tricks in this day and age..
+        assert(m_snapshot_ptr->get_api_command_ptr(0)->api_func == APIInterceptor::APIFUNCTION_GL_GLDEPTHFUNC);
 
-        reinterpret_cast<PFNGLPIXELSTOREIPROC>(OpenGL::g_cached_gl_pixel_storei)(GL_UNPACK_ALIGNMENT,
-                                                                                 1);
-        reinterpret_cast<PFNGLDRAWPIXELSPROC> (OpenGL::g_cached_gl_draw_pixels) (q1_window_extents.at(0),
-                                                                                 q1_window_extents.at(1),
-                                                                                 GL_DEPTH_COMPONENT,
-                                                                                 GL_FLOAT,
-                                                                                 m_snapshot_prev_frame_depth_data_u8_vec_ptr->data() );
+        if (m_snapshot_ptr->get_api_command_ptr(0)->api_arg_vec.at(0).get_u32() == GL_LEQUAL)
+        {
+            reinterpret_cast<PFNGLCLEARDEPTHPROC>(OpenGL::g_cached_gl_clear_depth)(1.0);
+        }
+        else
+        {
+            reinterpret_cast<PFNGLCLEARDEPTHPROC>(OpenGL::g_cached_gl_clear_depth)(0.0);
+        }
+
+        reinterpret_cast<PFNGLCLEARPROC>(OpenGL::g_cached_gl_clear)(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     /* Set up global state. */
