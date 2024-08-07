@@ -12,15 +12,14 @@
 class                                     ReplayerSnapshot;
 typedef std::unique_ptr<ReplayerSnapshot> ReplayerSnapshotUniquePtr;
 
-
 class ReplayerSnapshot
 {
 public:
     /* Public funcs */
     ~ReplayerSnapshot();
 
-    uint32_t          get_n_api_commands ()                                 const;
-    const APICommand* get_api_command_ptr(const uint32_t& in_n_api_command) const;
+    uint32_t                          get_n_api_commands ()                                 const;
+    const APIInterceptor::APICommand* get_api_command_ptr(const uint32_t& in_n_api_command) const;
 
     void record_api_call(const APIInterceptor::APIFunction&         in_api_func,
                          const uint32_t&                            in_n_args,
@@ -34,7 +33,7 @@ private:
     ReplayerSnapshot();
 
     /* Private vars */
-    std::vector<APICommand> m_api_command_vec;
+    std::vector<APIInterceptor::APICommand> m_api_command_vec;
 };
 
 #endif /* REPLAYER_SNAPSHOT_H */

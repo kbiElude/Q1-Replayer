@@ -29,7 +29,7 @@ uint32_t ReplayerSnapshot::get_n_api_commands() const
     return static_cast<uint32_t>(m_api_command_vec.size() );
 }
 
-const APICommand* ReplayerSnapshot::get_api_command_ptr(const uint32_t& in_n_api_command) const
+const APIInterceptor::APICommand* ReplayerSnapshot::get_api_command_ptr(const uint32_t& in_n_api_command) const
 {
     return &m_api_command_vec.at(in_n_api_command);
 }
@@ -39,9 +39,9 @@ void ReplayerSnapshot::record_api_call(const APIInterceptor::APIFunction&       
                                        const uint32_t&                            in_n_args,
                                        const APIInterceptor::APIFunctionArgument* in_args_ptr)
 {
-    APICommand* cached_api_command_ptr = nullptr;
+    APIInterceptor::APICommand* cached_api_command_ptr = nullptr;
 
-    m_api_command_vec.push_back(APICommand() );
+    m_api_command_vec.push_back(APIInterceptor::APICommand() );
 
     cached_api_command_ptr           = &m_api_command_vec.back();
     cached_api_command_ptr->api_func = in_api_func;

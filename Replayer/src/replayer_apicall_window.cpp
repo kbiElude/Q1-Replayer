@@ -6,6 +6,7 @@
 #include "replayer_apicall_window.h"
 #include "Common/callbacks.h"
 #include "Common/logger.h"
+#include "Common/utils.h"
 #include "glfw/glfw3.h"
 #include "glfw/glfw3native.h"
 #include "imgui/backends/imgui_impl_glfw.h"
@@ -130,44 +131,61 @@ void ReplayerAPICallWindow::execute()
 
                 ImGui::NewFrame();
                 {
-                    int display_h = 0;
-                    int display_w = 0;
+                    int        display_h   = 0;
+                    int        display_w   = 0;
 
                     glfwGetFramebufferSize(m_window_ptr,
                                           &display_w,
                                           &display_h);
 
-                    ImGui::Begin("Hello.", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
+                    if (m_snapshot_ptr != nullptr)
                     {
-                        const auto window_size = ImGui::GetWindowSize();
+                        const auto api_call_listbox_height = m_window_extents.at(1) * 3 / 4; /* 75% */
 
-                        if (m_snapshot_ptr != nullptr)
+                        ImGui::Begin("API calls",
+                                     nullptr,
+                                     ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize);
                         {
-                            ImGui::Begin("API calls", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize);
+                            if (ImGui::BeginMenuBar() )
                             {
-                                ImGui::SetWindowPos(ImVec2(0, 0) );
-
-                                ImGui::BeginListBox("###APICalls");
-                                {
-                                    static bool is_selected = false;
-
-                                    ImGui::Selectable("APICall1()",        &is_selected);
-                                    ImGui::Selectable("APICall2(1, 2, 3)", &is_selected);
-                                    ImGui::Selectable("APICall3(DUPA7)",   &is_selected);
-                                }
-                                ImGui::EndListBox();
+                                ImGui::TextUnformatted("API calls");
+                                ImGui::EndMenuBar     ();
                             }
-                            ImGui::End();
+
+                            ImGui::SetWindowPos (ImVec2(0, 0) );
+                            ImGui::SetWindowSize(ImVec2(static_cast<float>(m_window_extents.at(0) ),
+                                                        static_cast<float>(m_window_extents.at(1) )));
+
+                            ImGui::BeginListBox("##",
+                                                ImVec2(display_w - 10, static_cast<float>(api_call_listbox_height) ));
+                            {
+                                static bool is_selected    = false;
+                                const auto  n_api_commands = static_cast<uint32_t>(m_api_command_vec.size() );
+
+                                for (uint32_t n_api_command = 0;
+                                              n_api_command < n_api_commands;
+                                            ++n_api_command)
+                                {
+                                    ImGui::Checkbox("##",                                          &is_selected);
+                                    ImGui::SameLine ();
+                                    ImGui::Selectable(m_api_command_vec.at(n_api_command).c_str(), &is_selected);
+                                }
+                            }
+                            ImGui::EndListBox();
                         }
-                        else
+                        ImGui::End();
+                    }
+                    else
+                    {
+                        ImGui::Begin("Hello.", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
                         {
                             ImGui::Text("Press F11 to capture a frame..");
                         }
+                        ImGui::End();
 
-                        ImGui::SetWindowPos(ImVec2( (display_w - window_size.x) / 2,
-                                                    (display_h - window_size.y) / 2) );
+                        ImGui::SetWindowPos(ImVec2( (display_w - m_window_extents.at(0) ) / 2,
+                                                    (display_h - m_window_extents.at(1) ) / 2) );
                     }
-                    ImGui::End();
                 }
 
                 ImGui::Render                   ();
@@ -194,7 +212,13 @@ void ReplayerAPICallWindow::load_snapshot(ReplayerSnapshot* in_snapshot_ptr)
 {
     assert(in_snapshot_ptr != nullptr);
 
+    /* Cache the snapshot instance */
     m_snapshot_ptr = in_snapshot_ptr;
+
+    /* Generate API command list from the snapshot in a format that is friendly for consumption
+     * at frame rendering time.
+     */
+    update_api_command_list_vec();
 }
 
 void ReplayerAPICallWindow::lock_for_snapshot_access()
@@ -220,12 +244,47 @@ void ReplayerAPICallWindow::set_position(const std::array<uint32_t, 2>& in_x1y1,
                           in_x1y1.at(0),
                           in_x1y1.at(1) );
         glfwSetWindowSize(m_window_ptr,
-                         in_extents.at(0),
-                         in_extents.at(1) );
+                          in_extents.at(0),
+                          in_extents.at(1) );
     }
 }
 
 void ReplayerAPICallWindow::unlock_for_snapshot_access()
 {
     m_mutex.unlock();
+}
+
+void ReplayerAPICallWindow::update_api_command_list_vec()
+{
+    const auto  n_api_commands    = m_snapshot_ptr->get_n_api_commands();
+    const auto  n_digits_required = static_cast<uint32_t>             (std::log10(n_api_commands) );
+
+    std::string filler_string;
+    std::string temp_string;
+
+    m_api_command_vec.resize(n_api_commands);
+
+    for (uint32_t n_api_command = 0;
+                  n_api_command < n_api_commands;
+                ++n_api_command)
+    {
+        if ( (n_api_command % 10) == 0)
+        {
+            const auto n_zero_digits_needed = n_digits_required - static_cast<uint32_t>(std::log10(n_api_command) );
+
+            filler_string.clear();
+
+            for (uint32_t n_zero = 0;
+                          n_zero < n_zero_digits_needed;
+                        ++n_zero)
+            {
+                filler_string += "0";
+            }
+        }
+
+        APIInterceptor::convert_api_command_to_string(*m_snapshot_ptr->get_api_command_ptr(n_api_command),
+                                                      &temp_string);
+
+        m_api_command_vec.at(n_api_command) = filler_string + std::to_string(n_api_command) + ". " + temp_string;
+    }
 }

@@ -36,14 +36,16 @@ private:
     /* Private funcs */
     ReplayerAPICallWindow();
 
-    void execute();
+    void execute                    ();
+    void update_api_command_list_vec();
 
     /* Private vars */
     std::array<uint32_t, 2> m_window_extents;
     std::array<uint32_t, 2> m_window_x1y1;
 
-    std::mutex        m_mutex;
-    ReplayerSnapshot* m_snapshot_ptr;
+    std::vector<std::string> m_api_command_vec;
+    std::mutex               m_mutex;
+    ReplayerSnapshot*        m_snapshot_ptr;
 
     GLFWwindow*   m_window_ptr;
     std::thread   m_worker_thread;

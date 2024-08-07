@@ -16,17 +16,6 @@
 
 #include "Common/types.h"
 
-struct APICommand
-{
-    APIInterceptor::APIFunction                      api_func;
-    std::vector<APIInterceptor::APIFunctionArgument> api_arg_vec;
-
-    APICommand()
-        :api_func(APIInterceptor::APIFUNCTION_UNKNOWN)
-    {
-        /* Stub */
-    }
-};
 
 struct GLContextTextureState
 {
