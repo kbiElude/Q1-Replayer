@@ -31,8 +31,8 @@ public:
     void play_snapshot     ();
 
     bool is_snapshot_available     ();
-    void lock_for_snapshot_update  ();
-    void unlock_for_snapshot_update();
+    void lock_for_snapshot_access  ();
+    void unlock_for_snapshot_access();
 private:
     /* Private type defs */
 

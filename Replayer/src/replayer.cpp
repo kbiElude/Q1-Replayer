@@ -175,14 +175,14 @@ void Replayer::on_snapshot_available() const
     {
         Replayer* this_ptr = const_cast<Replayer*>(this);
 
-        m_replayer_snapshot_player_ptr->lock_for_snapshot_update();
+        m_replayer_snapshot_player_ptr->lock_for_snapshot_access();
         {
             m_replayer_snapshotter_ptr->pop_snapshot(&this_ptr->m_snapshot_start_gl_context_state_ptr,
                                                      &this_ptr->m_snapshot_ptr,
                                                      &this_ptr->m_snapshot_gl_id_to_texture_props_map_ptr,
                                                      &this_ptr->m_snapshot_prev_frame_depth_data_u8_vec_ptr);
         }
-        m_replayer_snapshot_player_ptr->unlock_for_snapshot_update();
+        m_replayer_snapshot_player_ptr->unlock_for_snapshot_access();
 
         ++this_ptr->m_n_snapshot;
     }

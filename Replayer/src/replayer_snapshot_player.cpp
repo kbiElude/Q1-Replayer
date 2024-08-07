@@ -40,8 +40,6 @@ ReplayerSnapshotPlayerUniquePtr ReplayerSnapshotPlayer::create(ReplayerSnapshotL
 
 bool ReplayerSnapshotPlayer::is_snapshot_available()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
     return (m_snapshot_ptr != nullptr);
 }
 
@@ -50,8 +48,6 @@ void ReplayerSnapshotPlayer::load_snapshot(const GLContextState*        in_start
                                            const GLIDToTexturePropsMap* in_snapshot_gl_id_to_texture_props_map_ptr,
                                            const std::vector<uint8_t>*  in_snapshot_prev_frame_depth_data_u8_vec_ptr)
 {
-    std::lock_guard<std::mutex> lock_guard(m_mutex);
-
     m_snapshot_gl_id_to_texture_props_map_ptr   = in_snapshot_gl_id_to_texture_props_map_ptr;
     m_snapshot_initialized                      = false;
     m_snapshot_prev_frame_depth_data_u8_vec_ptr = in_snapshot_prev_frame_depth_data_u8_vec_ptr;
@@ -79,26 +75,18 @@ void ReplayerSnapshotPlayer::load_snapshot(const GLContextState*        in_start
                                         m_snapshot_gl_id_to_texture_props_map_ptr);
 }
 
-void ReplayerSnapshotPlayer::lock_for_snapshot_update()
+void ReplayerSnapshotPlayer::lock_for_snapshot_access()
 {
     m_mutex.lock();
-
-    m_snapshot_gl_id_to_texture_props_map_ptr   = nullptr;
-    m_snapshot_initialized                      = false;
-    m_snapshot_prev_frame_depth_data_u8_vec_ptr = nullptr;
-    m_snapshot_ptr                              = nullptr;
-    m_snapshot_start_gl_context_state_ptr       = nullptr;
 }
 
-void ReplayerSnapshotPlayer::unlock_for_snapshot_update()
+void ReplayerSnapshotPlayer::unlock_for_snapshot_access()
 {
     m_mutex.unlock();
 }
 
 void ReplayerSnapshotPlayer::play_snapshot()
 {
-    std::lock_guard<std::mutex> lock_guard(m_mutex);
-
     assert(m_snapshot_ptr != nullptr);
 
     const auto n_api_commands = m_snapshot_ptr->get_n_api_commands();

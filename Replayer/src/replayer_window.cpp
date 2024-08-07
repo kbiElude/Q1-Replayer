@@ -113,38 +113,45 @@ void ReplayerWindow::execute()
         glfwWaitEventsTimeout(0.5); /* timeout; 0.5 = half a second */
 
         {
-            const auto n_available_snapshot = m_replayer_ptr->get_n_current_snapshot();
-
-            if (n_available_snapshot != m_n_current_snapshot)
+            m_snapshot_player_ptr->lock_for_snapshot_access();
             {
-                const GLIDToTexturePropsMap* snapshot_gl_id_to_texture_props_map_ptr   = nullptr;
-                const ReplayerSnapshot*      snapshot_ptr                              = nullptr;
-                const std::vector<uint8_t>*  snapshot_prev_frame_depth_data_u8_vec_ptr = nullptr;
-                const GLContextState*        start_context_state_ptr                   = nullptr;
+                const auto n_available_snapshot = m_replayer_ptr->get_n_current_snapshot();
 
-                assert(m_n_current_snapshot == UINT32_MAX            ||
-                       n_available_snapshot >  m_n_current_snapshot);
+                if (n_available_snapshot != m_n_current_snapshot)
+                {
+                    const GLIDToTexturePropsMap* snapshot_gl_id_to_texture_props_map_ptr   = nullptr;
+                    const ReplayerSnapshot*      snapshot_ptr                              = nullptr;
+                    const std::vector<uint8_t>*  snapshot_prev_frame_depth_data_u8_vec_ptr = nullptr;
+                    const GLContextState*        start_context_state_ptr                   = nullptr;
 
-                m_replayer_ptr->get_current_snapshot(&snapshot_gl_id_to_texture_props_map_ptr,
-                                                     &snapshot_ptr,
-                                                     &snapshot_prev_frame_depth_data_u8_vec_ptr,
-                                                     &start_context_state_ptr);
-                m_snapshot_player_ptr->load_snapshot( start_context_state_ptr,
-                                                      snapshot_ptr,
-                                                      snapshot_gl_id_to_texture_props_map_ptr,
-                                                      snapshot_prev_frame_depth_data_u8_vec_ptr);
+                    assert(m_n_current_snapshot == UINT32_MAX            ||
+                           n_available_snapshot >  m_n_current_snapshot);
 
-                m_n_current_snapshot = n_available_snapshot;
+                    m_replayer_ptr->get_current_snapshot(&snapshot_gl_id_to_texture_props_map_ptr,
+                                                         &snapshot_ptr,
+                                                         &snapshot_prev_frame_depth_data_u8_vec_ptr,
+                                                         &start_context_state_ptr);
+
+                    assert(snapshot_ptr != nullptr);
+
+                    m_snapshot_player_ptr->load_snapshot( start_context_state_ptr,
+                                                          snapshot_ptr,
+                                                          snapshot_gl_id_to_texture_props_map_ptr,
+                                                          snapshot_prev_frame_depth_data_u8_vec_ptr);
+
+                    m_n_current_snapshot = n_available_snapshot;
+                }
+
+                if (m_n_current_snapshot != UINT32_MAX)
+                {
+                    m_snapshot_player_ptr->play_snapshot();
+                }
+                else
+                {
+                    glClear(GL_COLOR_BUFFER_BIT);
+                }
             }
-
-            if (m_n_current_snapshot != UINT32_MAX)
-            {
-                m_snapshot_player_ptr->play_snapshot();
-            }
-            else
-            {
-                glClear(GL_COLOR_BUFFER_BIT);
-            }
+            m_snapshot_player_ptr->unlock_for_snapshot_access();
         }
 
         glfwSwapBuffers(m_window_ptr);
