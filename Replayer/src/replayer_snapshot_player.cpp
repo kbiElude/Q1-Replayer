@@ -16,12 +16,11 @@
 
 
 ReplayerSnapshotPlayer::ReplayerSnapshotPlayer(const Replayer* in_replayer_ptr)
-    :m_replayer_ptr                             (in_replayer_ptr),
-     m_snapshot_gl_id_to_texture_props_map_ptr  (nullptr),
-     m_snapshot_initialized                     (false),
-     m_snapshot_prev_frame_depth_data_u8_vec_ptr(nullptr),
-     m_snapshot_ptr                             (nullptr),
-     m_snapshot_start_gl_context_state_ptr      (nullptr)
+    :m_replayer_ptr                           (in_replayer_ptr),
+     m_snapshot_gl_id_to_texture_props_map_ptr(nullptr),
+     m_snapshot_initialized                   (false),
+     m_snapshot_ptr                           (nullptr),
+     m_snapshot_start_gl_context_state_ptr    (nullptr)
 {
     /* Stub */
 }
@@ -46,14 +45,12 @@ bool ReplayerSnapshotPlayer::is_snapshot_available()
 
 void ReplayerSnapshotPlayer::load_snapshot(const GLContextState*        in_start_context_state_ptr,
                                            const ReplayerSnapshot*      in_snapshot_ptr,
-                                           const GLIDToTexturePropsMap* in_snapshot_gl_id_to_texture_props_map_ptr,
-                                           const std::vector<uint8_t>*  in_snapshot_prev_frame_depth_data_u8_vec_ptr)
+                                           const GLIDToTexturePropsMap* in_snapshot_gl_id_to_texture_props_map_ptr)
 {
-    m_snapshot_gl_id_to_texture_props_map_ptr   = in_snapshot_gl_id_to_texture_props_map_ptr;
-    m_snapshot_initialized                      = false;
-    m_snapshot_prev_frame_depth_data_u8_vec_ptr = in_snapshot_prev_frame_depth_data_u8_vec_ptr;
-    m_snapshot_ptr                              = in_snapshot_ptr;
-    m_snapshot_start_gl_context_state_ptr       = in_start_context_state_ptr;
+    m_snapshot_gl_id_to_texture_props_map_ptr = in_snapshot_gl_id_to_texture_props_map_ptr;
+    m_snapshot_initialized                    = false;
+    m_snapshot_ptr                            = in_snapshot_ptr;
+    m_snapshot_start_gl_context_state_ptr     = in_start_context_state_ptr;
 
     // Delete any textures we have outstanding from a previously loaded snapshot (if any)
     {

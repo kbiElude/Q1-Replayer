@@ -29,7 +29,6 @@ public:
 
     void get_current_snapshot(const GLIDToTexturePropsMap** out_snapshot_gl_id_to_texture_props_map_ptr_ptr,
                               const ReplayerSnapshot**      out_snapshot_ptr_ptr,
-                              const std::vector<uint8_t>**  out_snapshot_prev_frame_depth_data_u8_vec_ptr_ptr,
                               const GLContextState**        out_snapshot_start_gl_context_state_ptr_ptr) const;
 
     std::vector<uint8_t>* get_current_snapshot_command_enabled_bool_as_u8_vec_ptr() const;
@@ -59,7 +58,6 @@ private:
     std::vector<uint8_t>           m_snapshot_command_enabled_bool_as_u8_vec;
     GLIDToTexturePropsMapUniquePtr m_snapshot_gl_id_to_texture_props_map_ptr;
     ReplayerSnapshotUniquePtr      m_snapshot_ptr;
-    U8VecUniquePtr                 m_snapshot_prev_frame_depth_data_u8_vec_ptr;
     GLContextStateUniquePtr        m_snapshot_start_gl_context_state_ptr;
 
     ReplayerAPICallWindowUniquePtr  m_replayer_apicall_window_ptr;

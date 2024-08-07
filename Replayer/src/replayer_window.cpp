@@ -127,25 +127,22 @@ void ReplayerWindow::execute()
 
             if (n_available_snapshot != m_n_current_snapshot)
             {
-                const GLIDToTexturePropsMap* snapshot_gl_id_to_texture_props_map_ptr   = nullptr;
-                const ReplayerSnapshot*      snapshot_ptr                              = nullptr;
-                const std::vector<uint8_t>*  snapshot_prev_frame_depth_data_u8_vec_ptr = nullptr;
-                const GLContextState*        start_context_state_ptr                   = nullptr;
+                const GLIDToTexturePropsMap* snapshot_gl_id_to_texture_props_map_ptr = nullptr;
+                const ReplayerSnapshot*      snapshot_ptr                            = nullptr;
+                const GLContextState*        start_context_state_ptr                 = nullptr;
 
                 assert(m_n_current_snapshot == UINT32_MAX            ||
                        n_available_snapshot >  m_n_current_snapshot);
 
                 m_replayer_ptr->get_current_snapshot(&snapshot_gl_id_to_texture_props_map_ptr,
                                                      &snapshot_ptr,
-                                                     &snapshot_prev_frame_depth_data_u8_vec_ptr,
                                                      &start_context_state_ptr);
 
                 assert(snapshot_ptr != nullptr);
 
                 m_snapshot_player_ptr->load_snapshot(start_context_state_ptr,
                                                      snapshot_ptr,
-                                                     snapshot_gl_id_to_texture_props_map_ptr,
-                                                     snapshot_prev_frame_depth_data_u8_vec_ptr);
+                                                     snapshot_gl_id_to_texture_props_map_ptr);
 
                 m_n_current_snapshot = n_available_snapshot;
             }

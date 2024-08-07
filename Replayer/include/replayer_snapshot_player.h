@@ -25,8 +25,7 @@ public:
 
     void load_snapshot(const GLContextState*        in_start_context_state_ptr,
                        const ReplayerSnapshot*      in_snapshot_ptr,
-                       const GLIDToTexturePropsMap* in_snapshot_gl_id_to_texture_props_map_ptr,
-                       const std::vector<uint8_t>*  in_snapshot_prev_frame_depth_data_u8_vec_ptr);
+                       const GLIDToTexturePropsMap* in_snapshot_gl_id_to_texture_props_map_ptr);
     void play_snapshot();
 
     bool is_snapshot_available     ();
@@ -46,7 +45,6 @@ private:
     bool                    m_snapshot_initialized;
 
     const GLIDToTexturePropsMap* m_snapshot_gl_id_to_texture_props_map_ptr;
-    const std::vector<uint8_t>*  m_snapshot_prev_frame_depth_data_u8_vec_ptr;
     const ReplayerSnapshot*      m_snapshot_ptr;
     const GLContextState*        m_snapshot_start_gl_context_state_ptr;
 

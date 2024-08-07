@@ -49,10 +49,9 @@ bool ReplayerSnapshotter::init()
     /* Initialize object instances. */
     const auto q1_window_extents = m_replayer_ptr->get_q1_window_extents();
 
-    m_current_context_state_ptr.reset         (new GLContextState       (q1_window_extents.at(0),
-                                                                         q1_window_extents.at(1) ) );
-    m_gl_id_to_texture_props_map_ptr.reset    (new GLIDToTexturePropsMap() );
-    m_prev_frame_depth_buffer_u8_vec_ptr.reset(new std::vector<uint8_t> (q1_window_extents.at(0) * q1_window_extents.at(1) * sizeof(float) ));
+    m_current_context_state_ptr.reset     (new GLContextState       (q1_window_extents.at(0),
+                                                                     q1_window_extents.at(1) ) );
+    m_gl_id_to_texture_props_map_ptr.reset(new GLIDToTexturePropsMap() );
 
     /* Initialize callback handlers for all GL entrypoints used by Q1. */
     for (uint32_t current_api_func =  static_cast<uint32_t>(APIInterceptor::APIFUNCTION_GL_FIRST);
@@ -457,12 +456,7 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
 
             assert(this_ptr->m_gl_id_to_texture_props_map_ptr != nullptr);
 
-            this_ptr->m_cached_gl_id_to_texture_props_map_ptr.reset    (new GLIDToTexturePropsMap(*this_ptr->m_gl_id_to_texture_props_map_ptr) );
-            this_ptr->m_cached_prev_frame_depth_buffer_u8_vec_ptr.reset(new std::vector<uint8_t> ( this_ptr->m_prev_frame_depth_buffer_u8_vec_ptr->size() ));
-
-            memcpy(this_ptr->m_cached_prev_frame_depth_buffer_u8_vec_ptr->data(),
-                   this_ptr->m_prev_frame_depth_buffer_u8_vec_ptr->data       (),
-                   this_ptr->m_prev_frame_depth_buffer_u8_vec_ptr->size       () );
+            this_ptr->m_cached_gl_id_to_texture_props_map_ptr.reset(new GLIDToTexturePropsMap(*this_ptr->m_gl_id_to_texture_props_map_ptr) );
 
             this_ptr->m_cached_snapshot_ptr               = std::move(this_ptr->m_recording_snapshot_ptr);
             this_ptr->m_cached_start_gl_context_state_ptr = std::move(this_ptr->m_start_gl_context_state_ptr);
@@ -503,8 +497,7 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
 
 bool ReplayerSnapshotter::pop_snapshot(GLContextStateUniquePtr*        out_start_gl_context_state_ptr_ptr,
                                        ReplayerSnapshotUniquePtr*      out_snapshot_ptr_ptr,
-                                       GLIDToTexturePropsMapUniquePtr* out_gl_id_to_texture_props_map_ptr_ptr,
-                                       U8VecUniquePtr*                 out_prev_frame_depth_data_u8_vec_ptr_ptr)
+                                       GLIDToTexturePropsMapUniquePtr* out_gl_id_to_texture_props_map_ptr_ptr)
 {
     std::lock_guard<std::mutex> lock  (m_mutex);
     bool                        result(false);
@@ -516,7 +509,6 @@ bool ReplayerSnapshotter::pop_snapshot(GLContextStateUniquePtr*        out_start
             assert(m_cached_snapshot_ptr != nullptr);
 
             *out_gl_id_to_texture_props_map_ptr_ptr   = std::move(m_cached_gl_id_to_texture_props_map_ptr);
-            *out_prev_frame_depth_data_u8_vec_ptr_ptr = std::move(m_cached_prev_frame_depth_buffer_u8_vec_ptr);
             *out_snapshot_ptr_ptr                     = std::move(m_cached_snapshot_ptr);
             *out_start_gl_context_state_ptr_ptr       = std::move(m_cached_start_gl_context_state_ptr);
 

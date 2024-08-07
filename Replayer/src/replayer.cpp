@@ -87,12 +87,10 @@ ReplayerUniquePtr Replayer::create()
 
 void Replayer::get_current_snapshot(const GLIDToTexturePropsMap** out_snapshot_gl_id_to_texture_props_map_ptr_ptr,
                                     const ReplayerSnapshot**      out_snapshot_ptr_ptr,
-                                    const std::vector<uint8_t>**  out_snapshot_prev_frame_depth_data_u8_vec_ptr_ptr,
                                     const GLContextState**        out_snapshot_start_gl_context_state_ptr_ptr) const
 {
     *out_snapshot_gl_id_to_texture_props_map_ptr_ptr   = m_snapshot_gl_id_to_texture_props_map_ptr.get  ();
     *out_snapshot_ptr_ptr                              = m_snapshot_ptr.get                             ();
-    *out_snapshot_prev_frame_depth_data_u8_vec_ptr_ptr = m_snapshot_prev_frame_depth_data_u8_vec_ptr.get();
     *out_snapshot_start_gl_context_state_ptr_ptr       = m_snapshot_start_gl_context_state_ptr.get      ();
 }
 
@@ -187,8 +185,7 @@ void Replayer::on_snapshot_available() const
              */
             m_replayer_snapshotter_ptr->pop_snapshot(&this_ptr->m_snapshot_start_gl_context_state_ptr,
                                                      &this_ptr->m_snapshot_ptr,
-                                                     &this_ptr->m_snapshot_gl_id_to_texture_props_map_ptr,
-                                                     &this_ptr->m_snapshot_prev_frame_depth_data_u8_vec_ptr);
+                                                     &this_ptr->m_snapshot_gl_id_to_texture_props_map_ptr);
 
             /* Refresh the "command enabled" vector. Assume all commands are enabled by default.
              *
