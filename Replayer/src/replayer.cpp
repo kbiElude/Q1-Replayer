@@ -176,18 +176,26 @@ void Replayer::on_snapshot_available() const
 
         m_replayer_snapshot_player_ptr->lock_for_snapshot_access();
         {
+            /* NOTE: Since this function is likely called from within apllication's rendering thread, we need to remember
+             *       that the replayer's rendering thread lives elsewhere, possibly consuming the snapshot in parallel.
+             *       Make sure this is not the case by locking the access.
+             */
             m_replayer_snapshotter_ptr->pop_snapshot(&this_ptr->m_snapshot_start_gl_context_state_ptr,
                                                      &this_ptr->m_snapshot_ptr,
                                                      &this_ptr->m_snapshot_gl_id_to_texture_props_map_ptr,
                                                      &this_ptr->m_snapshot_prev_frame_depth_data_u8_vec_ptr);
+
+            /* Same goes for API call windows */
+            m_replayer_apicall_window_ptr->load_snapshot(this_ptr->m_snapshot_ptr.get() );
+
+            /* While we're at it, log the snapshot's contents to a dump file.. */
+            m_replayer_snapshot_logger_ptr->log_snapshot(this_ptr->m_snapshot_start_gl_context_state_ptr.get    (),
+                                                         this_ptr->m_snapshot_ptr.get                           (),
+                                                         this_ptr->m_snapshot_gl_id_to_texture_props_map_ptr.get() );
+
+            ++this_ptr->m_n_snapshot;
         }
         m_replayer_snapshot_player_ptr->unlock_for_snapshot_access();
-
-        m_replayer_snapshot_logger_ptr->log_snapshot(this_ptr->m_snapshot_start_gl_context_state_ptr.get    (),
-                                                     this_ptr->m_snapshot_ptr.get                           (),
-                                                     this_ptr->m_snapshot_gl_id_to_texture_props_map_ptr.get() );
-
-        ++this_ptr->m_n_snapshot;
     }
 
     m_replayer_window_ptr->refresh();

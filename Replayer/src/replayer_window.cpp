@@ -85,6 +85,15 @@ void ReplayerWindow::execute()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
     glfwWindowHint(GLFW_DEPTH_BITS,            32);
+    glfwWindowHint(GLFW_DOUBLEBUFFER,          1);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, 0);
+
+    #if defined(_DEBUG)
+    {
+        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+        glfwWindowHint(GLFW_OPENGL_PROFILE,       GLFW_OPENGL_COMPAT_PROFILE);
+    }
+    #endif
 
     // Create window with graphics context
     m_window_ptr = glfwCreateWindow(m_extents.at(0),
@@ -112,47 +121,45 @@ void ReplayerWindow::execute()
     {
         glfwWaitEventsTimeout(0.5); /* timeout; 0.5 = half a second */
 
+        m_snapshot_player_ptr->lock_for_snapshot_access();
         {
-            m_snapshot_player_ptr->lock_for_snapshot_access();
+            const auto n_available_snapshot = m_replayer_ptr->get_n_current_snapshot();
+
+            if (n_available_snapshot != m_n_current_snapshot)
             {
-                const auto n_available_snapshot = m_replayer_ptr->get_n_current_snapshot();
+                const GLIDToTexturePropsMap* snapshot_gl_id_to_texture_props_map_ptr   = nullptr;
+                const ReplayerSnapshot*      snapshot_ptr                              = nullptr;
+                const std::vector<uint8_t>*  snapshot_prev_frame_depth_data_u8_vec_ptr = nullptr;
+                const GLContextState*        start_context_state_ptr                   = nullptr;
 
-                if (n_available_snapshot != m_n_current_snapshot)
-                {
-                    const GLIDToTexturePropsMap* snapshot_gl_id_to_texture_props_map_ptr   = nullptr;
-                    const ReplayerSnapshot*      snapshot_ptr                              = nullptr;
-                    const std::vector<uint8_t>*  snapshot_prev_frame_depth_data_u8_vec_ptr = nullptr;
-                    const GLContextState*        start_context_state_ptr                   = nullptr;
+                assert(m_n_current_snapshot == UINT32_MAX            ||
+                       n_available_snapshot >  m_n_current_snapshot);
 
-                    assert(m_n_current_snapshot == UINT32_MAX            ||
-                           n_available_snapshot >  m_n_current_snapshot);
+                m_replayer_ptr->get_current_snapshot(&snapshot_gl_id_to_texture_props_map_ptr,
+                                                     &snapshot_ptr,
+                                                     &snapshot_prev_frame_depth_data_u8_vec_ptr,
+                                                     &start_context_state_ptr);
 
-                    m_replayer_ptr->get_current_snapshot(&snapshot_gl_id_to_texture_props_map_ptr,
-                                                         &snapshot_ptr,
-                                                         &snapshot_prev_frame_depth_data_u8_vec_ptr,
-                                                         &start_context_state_ptr);
+                assert(snapshot_ptr != nullptr);
 
-                    assert(snapshot_ptr != nullptr);
+                m_snapshot_player_ptr->load_snapshot(start_context_state_ptr,
+                                                     snapshot_ptr,
+                                                     snapshot_gl_id_to_texture_props_map_ptr,
+                                                     snapshot_prev_frame_depth_data_u8_vec_ptr);
 
-                    m_snapshot_player_ptr->load_snapshot( start_context_state_ptr,
-                                                          snapshot_ptr,
-                                                          snapshot_gl_id_to_texture_props_map_ptr,
-                                                          snapshot_prev_frame_depth_data_u8_vec_ptr);
-
-                    m_n_current_snapshot = n_available_snapshot;
-                }
-
-                if (m_n_current_snapshot != UINT32_MAX)
-                {
-                    m_snapshot_player_ptr->play_snapshot();
-                }
-                else
-                {
-                    glClear(GL_COLOR_BUFFER_BIT);
-                }
+                m_n_current_snapshot = n_available_snapshot;
             }
-            m_snapshot_player_ptr->unlock_for_snapshot_access();
+
+            if (m_n_current_snapshot != UINT32_MAX)
+            {
+                m_snapshot_player_ptr->play_snapshot();
+            }
+            else
+            {
+                glClear(GL_COLOR_BUFFER_BIT);
+            }
         }
+        m_snapshot_player_ptr->unlock_for_snapshot_access();
 
         glfwSwapBuffers(m_window_ptr);
     }

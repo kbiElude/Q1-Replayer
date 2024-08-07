@@ -20,7 +20,8 @@ static void glfw_error_callback(int         error,
 }
 
 ReplayerAPICallWindow::ReplayerAPICallWindow()
-    :m_window_ptr            (nullptr),
+    :m_snapshot_ptr          (nullptr),
+     m_window_ptr            (nullptr),
      m_worker_thread_must_die(false)
 {
     /* Stub */
@@ -140,7 +141,28 @@ void ReplayerAPICallWindow::execute()
                     {
                         const auto window_size = ImGui::GetWindowSize();
 
-                        ImGui::Text("Press F11 to capture a frame..");
+                        if (m_snapshot_ptr != nullptr)
+                        {
+                            ImGui::Begin("API calls", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize);
+                            {
+                                ImGui::SetWindowPos(ImVec2(0, 0) );
+
+                                ImGui::BeginListBox("###APICalls");
+                                {
+                                    static bool is_selected = false;
+
+                                    ImGui::Selectable("APICall1()",        &is_selected);
+                                    ImGui::Selectable("APICall2(1, 2, 3)", &is_selected);
+                                    ImGui::Selectable("APICall3(DUPA7)",   &is_selected);
+                                }
+                                ImGui::EndListBox();
+                            }
+                            ImGui::End();
+                        }
+                        else
+                        {
+                            ImGui::Text("Press F11 to capture a frame..");
+                        }
 
                         ImGui::SetWindowPos(ImVec2( (display_w - window_size.x) / 2,
                                                     (display_h - window_size.y) / 2) );
@@ -168,6 +190,18 @@ end:
     ;
 }
 
+void ReplayerAPICallWindow::load_snapshot(ReplayerSnapshot* in_snapshot_ptr)
+{
+    assert(in_snapshot_ptr != nullptr);
+
+    m_snapshot_ptr = in_snapshot_ptr;
+}
+
+void ReplayerAPICallWindow::lock_for_snapshot_access()
+{
+    m_mutex.lock();
+}
+
 void ReplayerAPICallWindow::set_position(const std::array<uint32_t, 2>& in_x1y1,
                                          const std::array<uint32_t, 2>& in_extents)
 {
@@ -189,4 +223,9 @@ void ReplayerAPICallWindow::set_position(const std::array<uint32_t, 2>& in_x1y1,
                          in_extents.at(0),
                          in_extents.at(1) );
     }
+}
+
+void ReplayerAPICallWindow::unlock_for_snapshot_access()
+{
+    m_mutex.unlock();
 }

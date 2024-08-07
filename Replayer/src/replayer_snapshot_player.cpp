@@ -3,6 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  */
 #include "OpenGL/globals.h"
+#include "WGL/globals.h"
 #include "replayer.h"
 #include "replayer_snapshot_logger.h"
 #include "replayer_snapshot_player.h"
@@ -15,8 +16,12 @@
 
 
 ReplayerSnapshotPlayer::ReplayerSnapshotPlayer(const Replayer* in_replayer_ptr)
-    :m_replayer_ptr        (in_replayer_ptr),
-     m_snapshot_initialized(false)
+    :m_replayer_ptr                             (in_replayer_ptr),
+     m_snapshot_gl_id_to_texture_props_map_ptr  (nullptr),
+     m_snapshot_initialized                     (false),
+     m_snapshot_prev_frame_depth_data_u8_vec_ptr(nullptr),
+     m_snapshot_ptr                             (nullptr),
+     m_snapshot_start_gl_context_state_ptr      (nullptr)
 {
     /* Stub */
 }
@@ -48,7 +53,7 @@ void ReplayerSnapshotPlayer::load_snapshot(const GLContextState*        in_start
     m_snapshot_initialized                      = false;
     m_snapshot_prev_frame_depth_data_u8_vec_ptr = in_snapshot_prev_frame_depth_data_u8_vec_ptr;
     m_snapshot_ptr                              = in_snapshot_ptr;
-    m_snapshot_start_gl_context_state_ptr       = std::move(in_start_context_state_ptr);
+    m_snapshot_start_gl_context_state_ptr       = in_start_context_state_ptr;
 
     {
         std::vector<uint32_t> gl_texture_id_vec;
@@ -117,7 +122,7 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 {
                     const auto texture_mip_props_ptr = &texture_props_ptr->mip_props_vec.at(n_mip);
 
-                    reinterpret_cast<PFNGLTEXIMAGE2DPROC>(OpenGL::g_cached_gl_tex_image_2d)(GL_TEXTURE_2D,
+                    reinterpret_cast<PFNGLTEXIMAGE2DPROC>(OpenGL::g_cached_gl_tex_image_2D)(GL_TEXTURE_2D,
                                                                                             n_mip,
                                                                                             texture_mip_props_ptr->internal_format,
                                                                                             texture_mip_props_ptr->mip_size_u32vec3.at(0),
@@ -530,7 +535,7 @@ void ReplayerSnapshotPlayer::play_snapshot()
 
                 case APIInterceptor::APIFUNCTION_GL_GLTEXIMAGE2D:
                 {
-                    reinterpret_cast<PFNGLTEXIMAGE2DPROC>(OpenGL::g_cached_gl_tex_image_2d)(api_command_ptr->api_arg_vec.at(0).get_u32(),
+                    reinterpret_cast<PFNGLTEXIMAGE2DPROC>(OpenGL::g_cached_gl_tex_image_2D)(api_command_ptr->api_arg_vec.at(0).get_u32(),
                                                                                             api_command_ptr->api_arg_vec.at(1).get_i32(),
                                                                                             api_command_ptr->api_arg_vec.at(2).get_i32(),
                                                                                             api_command_ptr->api_arg_vec.at(3).get_i32(),

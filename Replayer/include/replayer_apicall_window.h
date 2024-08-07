@@ -12,6 +12,7 @@
 struct                                         GLFWwindow;
 class                                          ReplayerAPICallWindow;
 typedef std::unique_ptr<ReplayerAPICallWindow> ReplayerAPICallWindowUniquePtr;
+class                                          ReplayerSnapshot;
 
 
 class ReplayerAPICallWindow
@@ -21,6 +22,10 @@ public:
 
     /* Public funcs */
     ~ReplayerAPICallWindow();
+
+    void load_snapshot             (ReplayerSnapshot* in_snapshot_ptr);
+    void lock_for_snapshot_access  ();
+    void unlock_for_snapshot_access();
 
     void set_position(const std::array<uint32_t, 2>& in_x1y1,
                       const std::array<uint32_t, 2>& in_extents);
@@ -36,6 +41,9 @@ private:
     /* Private vars */
     std::array<uint32_t, 2> m_window_extents;
     std::array<uint32_t, 2> m_window_x1y1;
+
+    std::mutex        m_mutex;
+    ReplayerSnapshot* m_snapshot_ptr;
 
     GLFWwindow*   m_window_ptr;
     std::thread   m_worker_thread;
