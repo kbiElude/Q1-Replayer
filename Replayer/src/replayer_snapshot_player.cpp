@@ -136,7 +136,6 @@ void ReplayerSnapshotPlayer::play_snapshot()
         m_snapshot_initialized = true;
     }
 
-    /* Fill depth buffer with data cached from the preceding frame.. */
     {
         // NOTE: Handle gl_ztrick correctly by looking at the depth function set at the beginning of the frame.
         //

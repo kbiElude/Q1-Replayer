@@ -8,7 +8,7 @@
 int main()
 {
     char*               path_to_gdi32_proxy = "e:\\vr\\APIInterceptor-Q1\\build\\Debug\\Replayer.dll";
-    char*               path_to_executable  = "glquake.exe -window";
+    char*               path_to_executable  = "glquake.exe -window -fullsbar";
     PROCESS_INFORMATION process_info;
     STARTUPINFO         startup_info;
 
