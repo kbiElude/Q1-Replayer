@@ -7,7 +7,7 @@
 #include "replayer_apicall_window.h"
 #include "replayer_snapshotter.h"
 #include "replayer_window.h"
-#include <assert.h>
+#include <cassert>
 
 std::mutex g_imgui_mutex;
 HHOOK      g_keyboard_hook = 0;
@@ -96,6 +96,11 @@ void Replayer::get_current_snapshot(const GLIDToTexturePropsMap** out_snapshot_g
     *out_snapshot_start_gl_context_state_ptr_ptr       = m_snapshot_start_gl_context_state_ptr.get      ();
 }
 
+std::vector<uint8_t>* Replayer::get_current_snapshot_command_enabled_bool_as_u8_vec_ptr() const
+{
+    return &const_cast<Replayer*>(this)->m_snapshot_command_enabled_bool_as_u8_vec;
+}
+
 const uint32_t& Replayer::get_n_current_snapshot() const
 {
     return m_n_snapshot;
@@ -108,7 +113,7 @@ std::array<uint32_t, 2> Replayer::get_q1_window_extents() const
 
 bool Replayer::init()
 {
-    m_replayer_apicall_window_ptr  = ReplayerAPICallWindow::create ();
+    m_replayer_apicall_window_ptr  = ReplayerAPICallWindow::create (this);
     m_replayer_snapshot_logger_ptr = ReplayerSnapshotLogger::create();
     m_replayer_snapshot_player_ptr = ReplayerSnapshotPlayer::create(this);
     m_replayer_snapshotter_ptr     = ReplayerSnapshotter::create   (this);
@@ -185,7 +190,28 @@ void Replayer::on_snapshot_available() const
                                                      &this_ptr->m_snapshot_gl_id_to_texture_props_map_ptr,
                                                      &this_ptr->m_snapshot_prev_frame_depth_data_u8_vec_ptr);
 
-            /* Same goes for API call windows */
+            /* Refresh the "command enabled" vector. Assume all commands are enabled by default.
+             *
+             * NOTE: We can't do a bare memset here because bool is a compiler-specific type (sic) and imgui explicitly
+             *       requires bool-typed input
+             */
+            {
+                bool*      bool_ptr       = nullptr;
+                const auto n_api_commands = this_ptr->m_snapshot_ptr->get_n_api_commands();
+
+                this_ptr->m_snapshot_command_enabled_bool_as_u8_vec.resize(sizeof(bool) * n_api_commands);
+
+                bool_ptr = reinterpret_cast<bool*>(this_ptr->m_snapshot_command_enabled_bool_as_u8_vec.data() );
+
+                for (uint32_t n_api_command = 0;
+                              n_api_command < n_api_commands;
+                            ++n_api_command, bool_ptr++)
+                {
+                    *bool_ptr = true;
+                }
+            }
+
+            /* Reinitialize API call window with the new snapshot */
             m_replayer_apicall_window_ptr->load_snapshot(this_ptr->m_snapshot_ptr.get() );
 
             /* While we're at it, log the snapshot's contents to a dump file.. */

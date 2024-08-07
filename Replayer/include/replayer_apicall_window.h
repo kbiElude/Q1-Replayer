@@ -10,10 +10,10 @@
 
 /* Forward decls */
 struct                                         GLFWwindow;
+class                                          Replayer;
 class                                          ReplayerAPICallWindow;
 typedef std::unique_ptr<ReplayerAPICallWindow> ReplayerAPICallWindowUniquePtr;
 class                                          ReplayerSnapshot;
-
 
 class ReplayerAPICallWindow
 {
@@ -23,18 +23,18 @@ public:
     /* Public funcs */
     ~ReplayerAPICallWindow();
 
-    void load_snapshot             (ReplayerSnapshot* in_snapshot_ptr);
+    void load_snapshot             (ReplayerSnapshot*     in_snapshot_ptr);
     void lock_for_snapshot_access  ();
     void unlock_for_snapshot_access();
 
     void set_position(const std::array<uint32_t, 2>& in_x1y1,
                       const std::array<uint32_t, 2>& in_extents);
 
-    static ReplayerAPICallWindowUniquePtr create();
+    static ReplayerAPICallWindowUniquePtr create(const Replayer* in_replayer_ptr);
 
 private:
     /* Private funcs */
-    ReplayerAPICallWindow();
+    ReplayerAPICallWindow(const Replayer* in_replayer_ptr);
 
     void execute                    ();
     void update_api_command_list_vec();
@@ -45,11 +45,12 @@ private:
 
     std::vector<std::string> m_api_command_vec;
     std::mutex               m_mutex;
+    const Replayer*          m_replayer_ptr;
     ReplayerSnapshot*        m_snapshot_ptr;
 
-    GLFWwindow*   m_window_ptr;
-    std::thread   m_worker_thread;
-    volatile bool m_worker_thread_must_die;
+    GLFWwindow*     m_window_ptr;
+    std::thread     m_worker_thread;
+    volatile bool   m_worker_thread_must_die;
 };
 
 #endif /* REPLAYER_APICALL_WINDOW_H */

@@ -20,8 +20,9 @@ static void glfw_error_callback(int         error,
     assert(false && "GLFW error callback received");
 }
 
-ReplayerAPICallWindow::ReplayerAPICallWindow()
-    :m_snapshot_ptr          (nullptr),
+ReplayerAPICallWindow::ReplayerAPICallWindow(const Replayer* in_replayer_ptr)
+    :m_replayer_ptr          (in_replayer_ptr),
+     m_snapshot_ptr          (nullptr),
      m_window_ptr            (nullptr),
      m_worker_thread_must_die(false)
 {
@@ -35,10 +36,10 @@ ReplayerAPICallWindow::~ReplayerAPICallWindow()
     m_worker_thread.join();
 }
 
-ReplayerAPICallWindowUniquePtr ReplayerAPICallWindow::create()
+ReplayerAPICallWindowUniquePtr ReplayerAPICallWindow::create(const Replayer* in_replayer_ptr)
 {
     ReplayerAPICallWindowUniquePtr result_ptr(
-        new ReplayerAPICallWindow()
+        new ReplayerAPICallWindow(in_replayer_ptr)
     );
 
     assert(result_ptr != nullptr);
@@ -157,18 +158,18 @@ void ReplayerAPICallWindow::execute()
                                                         static_cast<float>(m_window_extents.at(1) )));
 
                             ImGui::BeginListBox("##",
-                                                ImVec2(display_w - 10, static_cast<float>(api_call_listbox_height) ));
+                                                ImVec2(static_cast<float>(display_w - 10), static_cast<float>(api_call_listbox_height) ));
                             {
-                                static bool is_selected    = false;
-                                const auto  n_api_commands = static_cast<uint32_t>(m_api_command_vec.size() );
+                                auto       command_enabled_bool_ptr = reinterpret_cast<bool*>(m_replayer_ptr->get_current_snapshot_command_enabled_bool_as_u8_vec_ptr()->data() );
+                                const auto n_api_commands           = static_cast<uint32_t>  (m_api_command_vec.size                                                 ()         );
 
                                 for (uint32_t n_api_command = 0;
                                               n_api_command < n_api_commands;
                                             ++n_api_command)
                                 {
-                                    ImGui::Checkbox("##",                                          &is_selected);
+                                    ImGui::Checkbox ("##",                                         command_enabled_bool_ptr + n_api_command);
                                     ImGui::SameLine ();
-                                    ImGui::Selectable(m_api_command_vec.at(n_api_command).c_str(), &is_selected);
+                                    ImGui::Selectable(m_api_command_vec.at(n_api_command).c_str(), command_enabled_bool_ptr + n_api_command);
                                 }
                             }
                             ImGui::EndListBox();
@@ -183,8 +184,8 @@ void ReplayerAPICallWindow::execute()
                         }
                         ImGui::End();
 
-                        ImGui::SetWindowPos(ImVec2( (display_w - m_window_extents.at(0) ) / 2,
-                                                    (display_h - m_window_extents.at(1) ) / 2) );
+                        ImGui::SetWindowPos(ImVec2( static_cast<float>(display_w - m_window_extents.at(0) ) / 2,
+                                                    static_cast<float>(display_h - m_window_extents.at(1) ) / 2) );
                     }
                 }
 

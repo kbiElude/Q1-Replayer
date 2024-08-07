@@ -55,6 +55,7 @@ void ReplayerSnapshotPlayer::load_snapshot(const GLContextState*        in_start
     m_snapshot_ptr                              = in_snapshot_ptr;
     m_snapshot_start_gl_context_state_ptr       = in_start_context_state_ptr;
 
+    // Delete any textures we have outstanding from a previously loaded snapshot (if any)
     {
         std::vector<uint32_t> gl_texture_id_vec;
 
@@ -253,13 +254,20 @@ void ReplayerSnapshotPlayer::play_snapshot()
 
     /* Go ahead and replay the snapshot. */
     {
-        bool is_begin_active = false;
+        auto command_enabled_bool_ptr = reinterpret_cast<const bool*>(m_replayer_ptr->get_current_snapshot_command_enabled_bool_as_u8_vec_ptr()->data() );
+        bool is_begin_active          = false;
 
         for (uint32_t n_api_command = 0;
                       n_api_command < n_api_commands;
                     ++n_api_command)
         {
             const auto api_command_ptr = m_snapshot_ptr->get_api_command_ptr(n_api_command);
+
+            if (command_enabled_bool_ptr[n_api_command] == false)
+            {
+                /* Skip playback of commands that have been disabled */
+                continue;
+            }
 
             switch (api_command_ptr->api_func)
             {
