@@ -141,9 +141,23 @@ void ReplayerSnapshotPlayer::play_snapshot()
         // NOTE: Handle gl_ztrick correctly by looking at the depth function set at the beginning of the frame.
         //
         // Boy am I glad we no longer need to resort to such devilish tricks in this day and age..
-        assert(m_snapshot_ptr->get_api_command_ptr(0)->api_func == APIInterceptor::APIFUNCTION_GL_GLDEPTHFUNC);
+        auto frame_depth_func = GL_LEQUAL;
 
-        if (m_snapshot_ptr->get_api_command_ptr(0)->api_arg_vec.at(0).get_u32() == GL_LEQUAL)
+        for (uint32_t n_api_command = 0;
+                      n_api_command < n_api_commands;
+                    ++n_api_command)
+        {
+            auto api_command_ptr = m_snapshot_ptr->get_api_command_ptr(n_api_command);
+
+            if (api_command_ptr->api_func == APIInterceptor::APIFUNCTION_GL_GLDEPTHFUNC)
+            {
+                frame_depth_func = m_snapshot_ptr->get_api_command_ptr(0)->api_arg_vec.at(n_api_command).get_u32();
+
+                break;
+            }
+        }
+
+        if (frame_depth_func == GL_LEQUAL)
         {
             reinterpret_cast<PFNGLCLEARDEPTHPROC>(OpenGL::g_cached_gl_clear_depth)(1.0);
         }
