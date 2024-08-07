@@ -27,9 +27,15 @@ public:
 
     ~Replayer();
 
-    std::array<uint32_t, 2> get_q1_window_extents() const;
-    void                    on_snapshot_available() const;
-    void                    on_snapshot_requested();
+    void            get_current_snapshot  (const GLIDToTexturePropsMap** out_snapshot_gl_id_to_texture_props_map_ptr_ptr,
+                                           const ReplayerSnapshot**      out_snapshot_ptr_ptr,
+                                           const std::vector<uint8_t>**  out_snapshot_prev_frame_depth_data_u8_vec_ptr_ptr,
+                                           const GLContextState**        out_snapshot_start_gl_context_state_ptr_ptr)       const;
+    const uint32_t& get_n_current_snapshot()                                                                                const;
+
+    std::array<uint32_t, 2> get_q1_window_extents () const;
+    void                    on_snapshot_available () const;
+    void                    on_snapshot_requested ();
 
 private:
     /* Private funcs */
@@ -46,6 +52,12 @@ private:
     // <--
 
     /* Private vars */
+    uint32_t                       m_n_snapshot;
+    GLIDToTexturePropsMapUniquePtr m_snapshot_gl_id_to_texture_props_map_ptr;
+    ReplayerSnapshotUniquePtr      m_snapshot_ptr;
+    U8VecUniquePtr                 m_snapshot_prev_frame_depth_data_u8_vec_ptr;
+    GLContextStateUniquePtr        m_snapshot_start_gl_context_state_ptr;
+
     ReplayerAPICallWindowUniquePtr  m_replayer_apicall_window_ptr;
     ReplayerSnapshotLoggerUniquePtr m_replayer_snapshot_logger_ptr;
     ReplayerSnapshotPlayerUniquePtr m_replayer_snapshot_player_ptr;

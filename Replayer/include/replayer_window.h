@@ -23,17 +23,18 @@ public:
     /* Public funcs */
     ~ReplayerWindow();
 
-    void refresh     ();
-    void set_position(const std::array<uint32_t, 2>& in_x1y1);
+    void on_snapshot_updated();
+    void refresh            ();
+    void set_position       (const std::array<uint32_t, 2>& in_x1y1);
 
     static ReplayerWindowUniquePtr create(const std::array<uint32_t, 2>& in_extents,
-                                          ReplayerSnapshotter*           in_snapshotter_ptr,
+                                          Replayer*                      in_replayer_ptr,
                                           ReplayerSnapshotPlayer*        in_snapshot_player_ptr);
 
 private:
     /* Private funcs */
     ReplayerWindow(const std::array<uint32_t, 2>& in_extents,
-                   ReplayerSnapshotter*           in_snapshotter_ptr,
+                   Replayer*                      in_replayer_ptr,
                    ReplayerSnapshotPlayer*        in_snapshot_player_ptr);
 
     void execute();
@@ -41,10 +42,10 @@ private:
 
     /* Private vars */
     const std::array<uint32_t, 2> m_extents;
-    int                           m_n_last_api_command_to_execute;
 
+    uint32_t                m_n_current_snapshot;
+    Replayer*               m_replayer_ptr;
     ReplayerSnapshotPlayer* m_snapshot_player_ptr;
-    ReplayerSnapshotter*    m_snapshotter_ptr;
     GLFWwindow*             m_window_ptr;
     std::thread             m_worker_thread;
     volatile bool           m_worker_thread_must_die;

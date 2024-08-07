@@ -44,7 +44,8 @@ LRESULT CALLBACK on_keyboard_event(int    code,
 
 
 Replayer::Replayer()
-    :m_q1_hwnd(0)
+    :m_n_snapshot(UINT32_MAX),
+     m_q1_hwnd   (0)
 {
     /* Stub */
 }
@@ -84,6 +85,22 @@ ReplayerUniquePtr Replayer::create()
     return result_ptr;
 }
 
+void Replayer::get_current_snapshot(const GLIDToTexturePropsMap** out_snapshot_gl_id_to_texture_props_map_ptr_ptr,
+                                    const ReplayerSnapshot**      out_snapshot_ptr_ptr,
+                                    const std::vector<uint8_t>**  out_snapshot_prev_frame_depth_data_u8_vec_ptr_ptr,
+                                    const GLContextState**        out_snapshot_start_gl_context_state_ptr_ptr) const
+{
+    *out_snapshot_gl_id_to_texture_props_map_ptr_ptr   = m_snapshot_gl_id_to_texture_props_map_ptr.get  ();
+    *out_snapshot_ptr_ptr                              = m_snapshot_ptr.get                             ();
+    *out_snapshot_prev_frame_depth_data_u8_vec_ptr_ptr = m_snapshot_prev_frame_depth_data_u8_vec_ptr.get();
+    *out_snapshot_start_gl_context_state_ptr_ptr       = m_snapshot_start_gl_context_state_ptr.get      ();
+}
+
+const uint32_t& Replayer::get_n_current_snapshot() const
+{
+    return m_n_snapshot;
+}
+
 std::array<uint32_t, 2> Replayer::get_q1_window_extents() const
 {
     return {640, 480};
@@ -96,8 +113,8 @@ bool Replayer::init()
     m_replayer_snapshot_player_ptr = ReplayerSnapshotPlayer::create(m_replayer_snapshot_logger_ptr.get(),
                                                                     this);
     m_replayer_snapshotter_ptr     = ReplayerSnapshotter::create   (this);
-    m_replayer_window_ptr          = ReplayerWindow::create        (get_q1_window_extents(),
-                                                                    m_replayer_snapshotter_ptr.get    (),
+    m_replayer_window_ptr          = ReplayerWindow::create        (get_q1_window_extents             (),
+                                                                    this,
                                                                     m_replayer_snapshot_player_ptr.get() );
 
     assert(m_replayer_snapshotter_ptr != nullptr);
@@ -154,6 +171,22 @@ void Replayer::on_q1_wglmakecurrent(APIInterceptor::APIFunction                i
 
 void Replayer::on_snapshot_available() const
 {
+    /* If a snapshot has been captured, cache it and wake up the replayer window, so that it can consume it next. */
+    {
+        Replayer* this_ptr = const_cast<Replayer*>(this);
+
+        m_replayer_snapshot_player_ptr->lock_for_snapshot_update();
+        {
+            m_replayer_snapshotter_ptr->pop_snapshot(&this_ptr->m_snapshot_start_gl_context_state_ptr,
+                                                     &this_ptr->m_snapshot_ptr,
+                                                     &this_ptr->m_snapshot_gl_id_to_texture_props_map_ptr,
+                                                     &this_ptr->m_snapshot_prev_frame_depth_data_u8_vec_ptr);
+        }
+        m_replayer_snapshot_player_ptr->unlock_for_snapshot_update();
+
+        ++this_ptr->m_n_snapshot;
+    }
+
     m_replayer_window_ptr->refresh();
 }
 

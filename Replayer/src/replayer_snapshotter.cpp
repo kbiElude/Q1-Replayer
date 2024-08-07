@@ -26,8 +26,6 @@ ReplayerSnapshotter::~ReplayerSnapshotter()
 
 void ReplayerSnapshotter::cache_snapshot()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
     m_snapshot_requested = true;
 }
 
@@ -79,8 +77,7 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
                                                const APIInterceptor::APIFunctionArgument* in_args_ptr,
                                                void*                                      in_user_arg_ptr)
 {
-    auto                        this_ptr(reinterpret_cast<ReplayerSnapshotter*>(in_user_arg_ptr) );
-    std::lock_guard<std::mutex> lock    (this_ptr->m_mutex);
+    auto this_ptr(reinterpret_cast<ReplayerSnapshotter*>(in_user_arg_ptr) );
 
     if (this_ptr->m_start_gl_context_state_ptr == nullptr)
     {

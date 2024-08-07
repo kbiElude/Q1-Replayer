@@ -38,20 +38,24 @@ ReplayerSnapshotPlayerUniquePtr ReplayerSnapshotPlayer::create(ReplayerSnapshotL
     return result_ptr;
 }
 
-bool ReplayerSnapshotPlayer::is_snapshot_loaded() const
+bool ReplayerSnapshotPlayer::is_snapshot_available()
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     return (m_snapshot_ptr != nullptr);
 }
 
-void ReplayerSnapshotPlayer::load_snapshot(GLContextStateUniquePtr        in_start_context_state_ptr,
-                                           ReplayerSnapshotUniquePtr      in_snapshot_ptr,
-                                           GLIDToTexturePropsMapUniquePtr in_snapshot_gl_id_to_texture_props_map_ptr,
-                                           U8VecUniquePtr                 in_snapshot_prev_frame_depth_data_u8_vec_ptr)
+void ReplayerSnapshotPlayer::load_snapshot(const GLContextState*        in_start_context_state_ptr,
+                                           const ReplayerSnapshot*      in_snapshot_ptr,
+                                           const GLIDToTexturePropsMap* in_snapshot_gl_id_to_texture_props_map_ptr,
+                                           const std::vector<uint8_t>*  in_snapshot_prev_frame_depth_data_u8_vec_ptr)
 {
-    m_snapshot_gl_id_to_texture_props_map_ptr   = std::move(in_snapshot_gl_id_to_texture_props_map_ptr);
+    std::lock_guard<std::mutex> lock_guard(m_mutex);
+
+    m_snapshot_gl_id_to_texture_props_map_ptr   = in_snapshot_gl_id_to_texture_props_map_ptr;
     m_snapshot_initialized                      = false;
-    m_snapshot_prev_frame_depth_data_u8_vec_ptr = std::move(in_snapshot_prev_frame_depth_data_u8_vec_ptr);
-    m_snapshot_ptr                              = std::move(in_snapshot_ptr);
+    m_snapshot_prev_frame_depth_data_u8_vec_ptr = in_snapshot_prev_frame_depth_data_u8_vec_ptr;
+    m_snapshot_ptr                              = in_snapshot_ptr;
     m_snapshot_start_gl_context_state_ptr       = std::move(in_start_context_state_ptr);
 
     {
@@ -70,18 +74,34 @@ void ReplayerSnapshotPlayer::load_snapshot(GLContextStateUniquePtr        in_sta
         m_snapshot_texture_gl_id_to_texture_gl_id_map.clear();
     }
 
-    m_snapshot_logger_ptr->log_snapshot(m_snapshot_start_gl_context_state_ptr.get    (),
-                                        m_snapshot_ptr.get(),
-                                        m_snapshot_gl_id_to_texture_props_map_ptr.get() );
+    m_snapshot_logger_ptr->log_snapshot(m_snapshot_start_gl_context_state_ptr,
+                                        m_snapshot_ptr,
+                                        m_snapshot_gl_id_to_texture_props_map_ptr);
 }
 
-void ReplayerSnapshotPlayer::play_snapshot(const uint32_t& in_n_last_api_command_to_execute)
+void ReplayerSnapshotPlayer::lock_for_snapshot_update()
 {
+    m_mutex.lock();
+
+    m_snapshot_gl_id_to_texture_props_map_ptr   = nullptr;
+    m_snapshot_initialized                      = false;
+    m_snapshot_prev_frame_depth_data_u8_vec_ptr = nullptr;
+    m_snapshot_ptr                              = nullptr;
+    m_snapshot_start_gl_context_state_ptr       = nullptr;
+}
+
+void ReplayerSnapshotPlayer::unlock_for_snapshot_update()
+{
+    m_mutex.unlock();
+}
+
+void ReplayerSnapshotPlayer::play_snapshot()
+{
+    std::lock_guard<std::mutex> lock_guard(m_mutex);
+
     assert(m_snapshot_ptr != nullptr);
 
-    const auto n_api_commands             = m_snapshot_ptr->get_n_api_commands();
-    const auto n_last_api_command_to_play = std::min(in_n_last_api_command_to_execute,
-                                                     n_api_commands - 1);
+    const auto n_api_commands = m_snapshot_ptr->get_n_api_commands();
 
     if (!m_snapshot_initialized)
     {
@@ -251,7 +271,7 @@ void ReplayerSnapshotPlayer::play_snapshot(const uint32_t& in_n_last_api_command
         bool is_begin_active = false;
 
         for (uint32_t n_api_command = 0;
-                      n_api_command <= n_last_api_command_to_play;
+                      n_api_command < n_api_commands;
                     ++n_api_command)
         {
             const auto api_command_ptr = m_snapshot_ptr->get_api_command_ptr(n_api_command);

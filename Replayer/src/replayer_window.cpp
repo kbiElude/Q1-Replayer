@@ -20,14 +20,14 @@ static void glfw_error_callback(int         error,
 }
 
 ReplayerWindow::ReplayerWindow(const std::array<uint32_t, 2>& in_extents,
-                               ReplayerSnapshotter*           in_snapshotter_ptr,
+                               Replayer*                      in_replayer_ptr,
                                ReplayerSnapshotPlayer*        in_snapshot_player_ptr)
-    :m_extents                      (in_extents),
-     m_n_last_api_command_to_execute(0),
-     m_snapshot_player_ptr          (in_snapshot_player_ptr),
-     m_snapshotter_ptr              (in_snapshotter_ptr),
-     m_window_ptr                   (nullptr),
-     m_worker_thread_must_die       (false)
+    :m_extents               (in_extents),
+     m_n_current_snapshot    (UINT32_MAX),
+     m_replayer_ptr          (in_replayer_ptr),
+     m_snapshot_player_ptr   (in_snapshot_player_ptr),
+     m_window_ptr            (nullptr),
+     m_worker_thread_must_die(false)
 {
     /* Stub */
 }
@@ -40,11 +40,11 @@ ReplayerWindow::~ReplayerWindow()
 }
 
 ReplayerWindowUniquePtr ReplayerWindow::create(const std::array<uint32_t, 2>& in_extents,
-                                               ReplayerSnapshotter*           in_snapshotter_ptr,
+                                               Replayer*                      in_replayer_ptr,
                                                ReplayerSnapshotPlayer*        in_snapshot_player_ptr)
 {
     ReplayerWindowUniquePtr result_ptr(new ReplayerWindow(in_extents,
-                                                          in_snapshotter_ptr,
+                                                          in_replayer_ptr,
                                                           in_snapshot_player_ptr) );
 
     if (result_ptr != nullptr)
@@ -112,33 +112,34 @@ void ReplayerWindow::execute()
     {
         glfwWaitEventsTimeout(0.5); /* timeout; 0.5 = half a second */
 
-        /* If a snapshot has been captured, transfer it to the player */
         {
-            GLIDToTexturePropsMapUniquePtr new_snapshot_gl_id_to_texture_props_map_ptr;
-            ReplayerSnapshotUniquePtr      new_snapshot_ptr;
-            U8VecUniquePtr                 new_snapshot_prev_frame_depth_data_u8_vec_ptr;
-            GLContextStateUniquePtr        new_snapshot_start_gl_context_state_ptr;
+            const auto n_available_snapshot = m_replayer_ptr->get_n_current_snapshot();
 
-            if (m_snapshotter_ptr->pop_snapshot(&new_snapshot_start_gl_context_state_ptr,
-                                                &new_snapshot_ptr,
-                                                &new_snapshot_gl_id_to_texture_props_map_ptr,
-                                                &new_snapshot_prev_frame_depth_data_u8_vec_ptr) )
+            if (n_available_snapshot != m_n_current_snapshot)
             {
-                m_n_last_api_command_to_execute = new_snapshot_ptr->get_n_api_commands() - 1;
+                const GLIDToTexturePropsMap* snapshot_gl_id_to_texture_props_map_ptr   = nullptr;
+                const ReplayerSnapshot*      snapshot_ptr                              = nullptr;
+                const std::vector<uint8_t>*  snapshot_prev_frame_depth_data_u8_vec_ptr = nullptr;
+                const GLContextState*        start_context_state_ptr                   = nullptr;
 
-                m_snapshot_player_ptr->load_snapshot(std::move(new_snapshot_start_gl_context_state_ptr),
-                                                     std::move(new_snapshot_ptr),
-                                                     std::move(new_snapshot_gl_id_to_texture_props_map_ptr),
-                                                     std::move(new_snapshot_prev_frame_depth_data_u8_vec_ptr) );
+                assert(m_n_current_snapshot == UINT32_MAX            ||
+                       n_available_snapshot >  m_n_current_snapshot);
+
+                m_replayer_ptr->get_current_snapshot(&snapshot_gl_id_to_texture_props_map_ptr,
+                                                     &snapshot_ptr,
+                                                     &snapshot_prev_frame_depth_data_u8_vec_ptr,
+                                                     &start_context_state_ptr);
+                m_snapshot_player_ptr->load_snapshot( start_context_state_ptr,
+                                                      snapshot_ptr,
+                                                      snapshot_gl_id_to_texture_props_map_ptr,
+                                                      snapshot_prev_frame_depth_data_u8_vec_ptr);
+
+                m_n_current_snapshot = n_available_snapshot;
             }
-        }
 
-        {
-            const auto is_snapshot_loaded = m_snapshot_player_ptr->is_snapshot_loaded();
-
-            if (is_snapshot_loaded)
+            if (m_n_current_snapshot != UINT32_MAX)
             {
-                m_snapshot_player_ptr->play_snapshot(m_n_last_api_command_to_execute);
+                m_snapshot_player_ptr->play_snapshot();
             }
             else
             {
