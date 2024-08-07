@@ -100,7 +100,11 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
 
     if (in_api_func != APIInterceptor::APIFUNCTION_GDI32_SWAPBUFFERS)
     {
-        bool should_record_api_call = true;
+        // NOTE: Drop any calls that update front buffer.
+        //
+        // One case where this happens is on the loading screen, where the front buffer has an extra pentagram drawn
+        // in the top-right corner. No need to capture this.
+        bool should_record_api_call = (this_ptr->m_current_context_state_ptr->draw_buffer_mode == GL_BACK);
 
         /* IF this is a GL call which disables/enables a GL capability, cache this information */
         if ( (in_api_func == APIInterceptor::APIFUNCTION_GL_GLDISABLE) || 
@@ -197,6 +201,7 @@ void ReplayerSnapshotter::on_api_func_callback(APIInterceptor::APIFunction      
         {
             const auto mode = in_args_ptr[0].get_u32();
 
+            should_record_api_call                                  = (mode == GL_BACK);
             this_ptr->m_current_context_state_ptr->draw_buffer_mode = mode;
         }
         else

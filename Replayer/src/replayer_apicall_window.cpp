@@ -170,6 +170,7 @@ void ReplayerAPICallWindow::execute()
                                 {
                                     command_adjusted |= ImGui::Checkbox("##",
                                                                         command_enabled_bool_ptr + n_api_command);
+
                                     ImGui::SameLine ();
 
                                     command_adjusted |= ImGui::Selectable(m_api_command_vec.at(n_api_command).c_str(),
