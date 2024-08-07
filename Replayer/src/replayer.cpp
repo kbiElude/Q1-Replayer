@@ -84,7 +84,8 @@ std::array<uint32_t, 2> Replayer::get_q1_window_extents() const
 bool Replayer::init()
 {
     m_replayer_snapshot_logger_ptr = ReplayerSnapshotLogger::create();
-    m_replayer_snapshot_player_ptr = ReplayerSnapshotPlayer::create(m_replayer_snapshot_logger_ptr.get() );
+    m_replayer_snapshot_player_ptr = ReplayerSnapshotPlayer::create(m_replayer_snapshot_logger_ptr.get(),
+                                                                    this);
     m_replayer_snapshotter_ptr     = ReplayerSnapshotter::create   (this);
     m_replayer_window_ptr          = ReplayerWindow::create        (get_q1_window_extents(),
                                                                     m_replayer_snapshotter_ptr.get    (),
@@ -106,11 +107,13 @@ void Replayer::on_q1_wglmakecurrent(APIInterceptor::APIFunction                i
                                     const APIInterceptor::APIFunctionArgument* in_args_ptr,
                                     void*                                      in_user_arg_ptr)
 {
+    auto      arg0_ptr = in_args_ptr[0].get_ptr();
+    auto      arg1_ptr = in_args_ptr[1].get_ptr();
     Replayer* this_ptr = reinterpret_cast<Replayer*>(in_user_arg_ptr);
 
-    if (in_args_ptr[1].value.value_ptr != nullptr)
+    if (arg1_ptr != nullptr)
     {
-        HDC  q1_hdc  = reinterpret_cast<HDC>(reinterpret_cast<intptr_t>(in_args_ptr[0].value.value_ptr) );
+        HDC  q1_hdc  = reinterpret_cast<HDC>(reinterpret_cast<intptr_t>(arg0_ptr) );
         HWND q1_hwnd = ::WindowFromDC       (q1_hdc);
 
         if (q1_hwnd != nullptr)

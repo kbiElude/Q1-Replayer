@@ -4,6 +4,7 @@
  */
 #include "replayer_snapshot_logger.h"
 #include "OpenGL/utils_enum.h"
+#include <iomanip>
 
 ReplayerSnapshotLogger::ReplayerSnapshotLogger()
     :m_n_snapshots_dumped(0)
@@ -75,18 +76,22 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
     {
         const auto n_api_commands = in_snapshot_ptr->get_n_api_commands();
 
+        log_sstream << std::setw(static_cast<std::streamsize>(log10(n_api_commands) ));
+
         for (uint32_t n_api_command = 0;
                       n_api_command < n_api_commands;
                     ++n_api_command)
         {
             auto api_command_ptr = in_snapshot_ptr->get_api_command_ptr(n_api_command);
 
+            log_sstream << "#" << n_api_command << ": ";
+
             switch (api_command_ptr->api_func)
             {
                 case APIInterceptor::APIFUNCTION_GL_GLALPHAFUNC:
                 {
-                    const auto arg_func = api_command_ptr->api_arg_vec.at(0).value.value_u32;
-                    const auto arg_ref  = api_command_ptr->api_arg_vec.at(1).value.value_fp32;
+                    const auto arg_func = api_command_ptr->api_arg_vec.at(0).get_u32 ();
+                    const auto arg_ref  = api_command_ptr->api_arg_vec.at(1).get_fp32();
 
                     log_sstream << "glAlphaFunc("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_func)
@@ -99,7 +104,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLBEGIN:
                 {
-                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).value.value_u32;
+                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).get_u32();
 
                     log_sstream << "glBegin("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_mode)
@@ -110,8 +115,8 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLBINDTEXTURE:
                 {
-                    const auto arg_target  = api_command_ptr->api_arg_vec.at(0).value.value_u32;
-                    const auto arg_texture = api_command_ptr->api_arg_vec.at(1).value.value_u32;
+                    const auto arg_target  = api_command_ptr->api_arg_vec.at(0).get_u32();
+                    const auto arg_texture = api_command_ptr->api_arg_vec.at(1).get_u32();
 
                     log_sstream << "glBindTexture("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_target)
@@ -124,8 +129,8 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLBLENDFUNC:
                 {
-                    const auto arg_sfactor = api_command_ptr->api_arg_vec.at(0).value.value_u32;
-                    const auto arg_dfactor = api_command_ptr->api_arg_vec.at(1).value.value_u32;
+                    const auto arg_sfactor = api_command_ptr->api_arg_vec.at(0).get_u32();
+                    const auto arg_dfactor = api_command_ptr->api_arg_vec.at(1).get_u32();
 
                     log_sstream << "glBlendFunc("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_sfactor)
@@ -138,7 +143,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLCLEAR:
                 {
-                    const auto arg_mask = api_command_ptr->api_arg_vec.at(0).value.value_u32;
+                    const auto arg_mask = api_command_ptr->api_arg_vec.at(0).get_u32();
 
                     log_sstream << "glClear("
                                 << OpenGL::Utils::get_raw_string_for_gl_bitfield(OpenGL::BitfieldType::Clear_Buffer_Mask,
@@ -150,10 +155,10 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLCLEARCOLOR:
                 {
-                    const auto arg_red   = api_command_ptr->api_arg_vec.at(0).value.value_fp32;
-                    const auto arg_green = api_command_ptr->api_arg_vec.at(1).value.value_fp32;
-                    const auto arg_blue  = api_command_ptr->api_arg_vec.at(2).value.value_fp32;
-                    const auto arg_alpha = api_command_ptr->api_arg_vec.at(3).value.value_fp32;
+                    const auto arg_red   = api_command_ptr->api_arg_vec.at(0).get_fp32();
+                    const auto arg_green = api_command_ptr->api_arg_vec.at(1).get_fp32();
+                    const auto arg_blue  = api_command_ptr->api_arg_vec.at(2).get_fp32();
+                    const auto arg_alpha = api_command_ptr->api_arg_vec.at(3).get_fp32();
 
                     log_sstream << "glClearColor("
                                 << arg_red
@@ -170,7 +175,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLCLEARDEPTH:
                 {
-                    const auto arg_depth = api_command_ptr->api_arg_vec.at(0).value.value_fp64;
+                    const auto arg_depth = api_command_ptr->api_arg_vec.at(0).get_fp64();
 
                     log_sstream << "glClearDepth("
                                 << arg_depth
@@ -181,9 +186,9 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLCOLOR3F:
                 {
-                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).value.value_fp32;
-                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).value.value_fp32;
-                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).value.value_fp32;
+                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).get_fp32();
+                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).get_fp32();
+                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).get_fp32();
 
                     log_sstream << "glColor3f("
                                 << arg_x
@@ -198,9 +203,9 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLCOLOR3UB:
                 {
-                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).value.value_u8;
-                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).value.value_u8;
-                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).value.value_u8;
+                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).get_u8();
+                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).get_u8();
+                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).get_u8();
 
                     log_sstream << "glColor3ub("
                                 << static_cast<uint32_t>(arg_x)
@@ -214,10 +219,10 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLCOLOR4F:
                 {
-                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).value.value_fp32;
-                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).value.value_fp32;
-                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).value.value_fp32;
-                    const auto arg_w = api_command_ptr->api_arg_vec.at(3).value.value_fp32;
+                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).get_fp32();
+                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).get_fp32();
+                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).get_fp32();
+                    const auto arg_w = api_command_ptr->api_arg_vec.at(3).get_fp32();
 
                     log_sstream << "glColor4f("
                                 << arg_x
@@ -234,7 +239,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLCULLFACE:
                 {
-                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).value.value_u32;
+                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).get_u32();
 
                     log_sstream << "glCullFace("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_mode)
@@ -245,7 +250,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLDEPTHFUNC:
                 {
-                    const auto arg_func = api_command_ptr->api_arg_vec.at(0).value.value_u32;
+                    const auto arg_func = api_command_ptr->api_arg_vec.at(0).get_u32();
 
                     log_sstream << "glDepthFunc("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_func)
@@ -256,7 +261,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLDEPTHMASK:
                 {
-                    const auto arg_flag = api_command_ptr->api_arg_vec.at(0).value.value_u32;
+                    const auto arg_flag = api_command_ptr->api_arg_vec.at(0).get_u32();
 
                     log_sstream << "glDepthMask("
                                 << arg_flag
@@ -267,8 +272,8 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLDEPTHRANGE:
                 {
-                    const auto arg_n = api_command_ptr->api_arg_vec.at(0).value.value_fp64;
-                    const auto arg_f = api_command_ptr->api_arg_vec.at(1).value.value_fp64;
+                    const auto arg_n = api_command_ptr->api_arg_vec.at(0).get_fp64();
+                    const auto arg_f = api_command_ptr->api_arg_vec.at(1).get_fp64();
 
                     log_sstream << "glDepthRange("
                                 << arg_n
@@ -281,7 +286,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLDISABLE:
                 {
-                    const auto arg_cap = api_command_ptr->api_arg_vec.at(0).value.value_u32;
+                    const auto arg_cap = api_command_ptr->api_arg_vec.at(0).get_u32();
 
                     log_sstream << "glDisable("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_cap)
@@ -292,7 +297,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLDRAWBUFFER:
                 {
-                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).value.value_u32;
+                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).get_u32();
 
                     log_sstream << "glDrawBuffer("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_mode)
@@ -303,7 +308,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLENABLE:
                 {
-                    const auto arg_cap = api_command_ptr->api_arg_vec.at(0).value.value_u32;
+                    const auto arg_cap = api_command_ptr->api_arg_vec.at(0).get_u32();
 
                     log_sstream << "glEnable("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_cap)
@@ -335,7 +340,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLFRONTFACE:
                 {
-                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).value.value_u32;
+                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).get_u32();
 
                     log_sstream << "glFrontFace("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_mode)
@@ -346,12 +351,12 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLFRUSTUM:
                 {
-                    const auto arg_left     = api_command_ptr->api_arg_vec.at(0).value.value_fp64;
-                    const auto arg_right    = api_command_ptr->api_arg_vec.at(1).value.value_fp64;
-                    const auto arg_bottom   = api_command_ptr->api_arg_vec.at(2).value.value_fp64;
-                    const auto arg_top      = api_command_ptr->api_arg_vec.at(3).value.value_fp64;
-                    const auto arg_near_val = api_command_ptr->api_arg_vec.at(4).value.value_fp64;
-                    const auto arg_far_val  = api_command_ptr->api_arg_vec.at(5).value.value_fp64;
+                    const auto arg_left     = api_command_ptr->api_arg_vec.at(0).get_fp64();
+                    const auto arg_right    = api_command_ptr->api_arg_vec.at(1).get_fp64();
+                    const auto arg_bottom   = api_command_ptr->api_arg_vec.at(2).get_fp64();
+                    const auto arg_top      = api_command_ptr->api_arg_vec.at(3).get_fp64();
+                    const auto arg_near_val = api_command_ptr->api_arg_vec.at(4).get_fp64();
+                    const auto arg_far_val  = api_command_ptr->api_arg_vec.at(5).get_fp64();
 
                     log_sstream << "glFrustum("
                                 << arg_left
@@ -379,7 +384,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLMATRIXMODE:
                 {
-                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).value.value_u32;
+                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).get_u32();
 
                     log_sstream << "glMatrixMode("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_mode)
@@ -390,12 +395,12 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLORTHO:
                 {
-                    const auto arg_left     = api_command_ptr->api_arg_vec.at(0).value.value_fp64;
-                    const auto arg_right    = api_command_ptr->api_arg_vec.at(1).value.value_fp64;
-                    const auto arg_bottom   = api_command_ptr->api_arg_vec.at(2).value.value_fp64;
-                    const auto arg_top      = api_command_ptr->api_arg_vec.at(3).value.value_fp64;
-                    const auto arg_near_val = api_command_ptr->api_arg_vec.at(4).value.value_fp64;
-                    const auto arg_far_val  = api_command_ptr->api_arg_vec.at(5).value.value_fp64;
+                    const auto arg_left     = api_command_ptr->api_arg_vec.at(0).get_fp64();
+                    const auto arg_right    = api_command_ptr->api_arg_vec.at(1).get_fp64();
+                    const auto arg_bottom   = api_command_ptr->api_arg_vec.at(2).get_fp64();
+                    const auto arg_top      = api_command_ptr->api_arg_vec.at(3).get_fp64();
+                    const auto arg_near_val = api_command_ptr->api_arg_vec.at(4).get_fp64();
+                    const auto arg_far_val  = api_command_ptr->api_arg_vec.at(5).get_fp64();
 
                     log_sstream << "glOrtho("
                                 << arg_left
@@ -430,10 +435,10 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLROTATEF:
                 {
-                    const auto arg_angle = api_command_ptr->api_arg_vec.at(0).value.value_fp32;
-                    const auto arg_x     = api_command_ptr->api_arg_vec.at(1).value.value_fp32;
-                    const auto arg_y     = api_command_ptr->api_arg_vec.at(2).value.value_fp32;
-                    const auto arg_z     = api_command_ptr->api_arg_vec.at(3).value.value_fp32;
+                    const auto arg_angle = api_command_ptr->api_arg_vec.at(0).get_fp32();
+                    const auto arg_x     = api_command_ptr->api_arg_vec.at(1).get_fp32();
+                    const auto arg_y     = api_command_ptr->api_arg_vec.at(2).get_fp32();
+                    const auto arg_z     = api_command_ptr->api_arg_vec.at(3).get_fp32();
 
                     log_sstream << "glRotatef("
                                 << arg_angle
@@ -450,9 +455,9 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLSCALEF:
                 {
-                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).value.value_fp32;
-                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).value.value_fp32;
-                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).value.value_fp32;
+                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).get_fp32();
+                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).get_fp32();
+                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).get_fp32();
 
                     log_sstream << "glScalef("
                                 << arg_x
@@ -467,7 +472,7 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLSHADEMODEL:
                 {
-                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).value.value_u32;
+                    const auto arg_mode = api_command_ptr->api_arg_vec.at(0).get_u32();
 
                     log_sstream << "glShaderModel("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_mode)
@@ -478,8 +483,8 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLTEXCOORD2F:
                 {
-                    const auto arg_s = api_command_ptr->api_arg_vec.at(0).value.value_fp32;
-                    const auto arg_t = api_command_ptr->api_arg_vec.at(1).value.value_fp32;
+                    const auto arg_s = api_command_ptr->api_arg_vec.at(0).get_fp32();
+                    const auto arg_t = api_command_ptr->api_arg_vec.at(1).get_fp32();
 
                     log_sstream << "glTexCoord2f("
                                 << arg_s
@@ -492,9 +497,9 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLTEXENVF:
                 {
-                    const auto arg_target = api_command_ptr->api_arg_vec.at(0).value.value_u32;
-                    const auto arg_pname  = api_command_ptr->api_arg_vec.at(1).value.value_u32;
-                    const auto arg_param  = api_command_ptr->api_arg_vec.at(2).value.value_fp32;
+                    const auto arg_target = api_command_ptr->api_arg_vec.at(0).get_u32 ();
+                    const auto arg_pname  = api_command_ptr->api_arg_vec.at(1).get_u32 ();
+                    const auto arg_param  = api_command_ptr->api_arg_vec.at(2).get_fp32();
 
                     log_sstream << "glTexEnvf("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_target)
@@ -509,15 +514,15 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLTEXIMAGE2D:
                 {
-                    const auto arg_target          = api_command_ptr->api_arg_vec.at(0).value.value_u32;
-                    const auto arg_level           = api_command_ptr->api_arg_vec.at(1).value.value_i32;
-                    const auto arg_internal_format = api_command_ptr->api_arg_vec.at(2).value.value_i32;
-                    const auto arg_width           = api_command_ptr->api_arg_vec.at(3).value.value_i32;
-                    const auto arg_height          = api_command_ptr->api_arg_vec.at(4).value.value_i32;
-                    const auto arg_border          = api_command_ptr->api_arg_vec.at(5).value.value_i32;
-                    const auto arg_format          = api_command_ptr->api_arg_vec.at(6).value.value_u32;
-                    const auto arg_type            = api_command_ptr->api_arg_vec.at(7).value.value_u32;
-                    const auto arg_data            = api_command_ptr->api_arg_vec.at(8).value.value_ptr;
+                    const auto arg_target          = api_command_ptr->api_arg_vec.at(0).get_u32();
+                    const auto arg_level           = api_command_ptr->api_arg_vec.at(1).get_i32();
+                    const auto arg_internal_format = api_command_ptr->api_arg_vec.at(2).get_i32();
+                    const auto arg_width           = api_command_ptr->api_arg_vec.at(3).get_i32();
+                    const auto arg_height          = api_command_ptr->api_arg_vec.at(4).get_i32();
+                    const auto arg_border          = api_command_ptr->api_arg_vec.at(5).get_i32();
+                    const auto arg_format          = api_command_ptr->api_arg_vec.at(6).get_u32();
+                    const auto arg_type            = api_command_ptr->api_arg_vec.at(7).get_u32();
+                    const auto arg_data            = api_command_ptr->api_arg_vec.at(8).get_ptr();
 
                     log_sstream << "glTexImage2D("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_target)
@@ -544,9 +549,9 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLTEXPARAMETERF:
                 {
-                    const auto arg_target = api_command_ptr->api_arg_vec.at(0).value.value_u32;
-                    const auto arg_pname  = api_command_ptr->api_arg_vec.at(1).value.value_u32;
-                    const auto arg_param  = api_command_ptr->api_arg_vec.at(2).value.value_fp32;
+                    const auto arg_target = api_command_ptr->api_arg_vec.at(0).get_u32 ();
+                    const auto arg_pname  = api_command_ptr->api_arg_vec.at(1).get_u32 ();
+                    const auto arg_param  = api_command_ptr->api_arg_vec.at(2).get_fp32();
 
                     log_sstream << "glTexParameterf("
                                 << OpenGL::Utils::get_raw_string_for_gl_enum(arg_target)
@@ -561,9 +566,9 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLTRANSLATEF:
                 {
-                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).value.value_fp32;
-                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).value.value_fp32;
-                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).value.value_fp32;
+                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).get_fp32();
+                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).get_fp32();
+                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).get_fp32();
 
                     log_sstream << "glTranslatef("
                                 << arg_x
@@ -578,8 +583,8 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLVERTEX2F:
                 {
-                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).value.value_fp32;
-                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).value.value_fp32;
+                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).get_fp32();
+                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).get_fp32();
 
                     log_sstream << "glVertex2f("
                                 << arg_x
@@ -592,9 +597,9 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLVERTEX3F:
                 {
-                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).value.value_fp32;
-                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).value.value_fp32;
-                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).value.value_fp32;
+                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).get_fp32();
+                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).get_fp32();
+                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).get_fp32();
 
                     log_sstream << "glVertex3f("
                                 << arg_x
@@ -609,10 +614,10 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLVERTEX4F:
                 {
-                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).value.value_fp32;
-                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).value.value_fp32;
-                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).value.value_fp32;
-                    const auto arg_w = api_command_ptr->api_arg_vec.at(3).value.value_fp32;
+                    const auto arg_x = api_command_ptr->api_arg_vec.at(0).get_fp32();
+                    const auto arg_y = api_command_ptr->api_arg_vec.at(1).get_fp32();
+                    const auto arg_z = api_command_ptr->api_arg_vec.at(2).get_fp32();
+                    const auto arg_w = api_command_ptr->api_arg_vec.at(3).get_fp32();
 
                     log_sstream << "glVertex3f("
                                 << arg_x
@@ -629,10 +634,10 @@ void ReplayerSnapshotLogger::log_snapshot(const GLContextState*        in_start_
 
                 case APIInterceptor::APIFUNCTION_GL_GLVIEWPORT:
                 {
-                    const auto arg_x      = api_command_ptr->api_arg_vec.at(0).value.value_i32;
-                    const auto arg_y      = api_command_ptr->api_arg_vec.at(1).value.value_i32;
-                    const auto arg_width  = api_command_ptr->api_arg_vec.at(2).value.value_i32;
-                    const auto arg_height = api_command_ptr->api_arg_vec.at(3).value.value_i32;
+                    const auto arg_x      = api_command_ptr->api_arg_vec.at(0).get_i32();
+                    const auto arg_y      = api_command_ptr->api_arg_vec.at(1).get_i32();
+                    const auto arg_width  = api_command_ptr->api_arg_vec.at(2).get_i32();
+                    const auto arg_height = api_command_ptr->api_arg_vec.at(3).get_i32();
 
                     log_sstream << "glViewport("
                                 << arg_x

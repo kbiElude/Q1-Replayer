@@ -42,7 +42,7 @@ private:
 
     /* Private vars */
     const std::array<uint32_t, 2> m_extents;
-    float                         m_replay_segment_end_normalized;
+    int                           m_n_last_api_command_to_execute;
 
     ReplayerSnapshotPlayer* m_snapshot_player_ptr;
     ReplayerSnapshotter*    m_snapshotter_ptr;

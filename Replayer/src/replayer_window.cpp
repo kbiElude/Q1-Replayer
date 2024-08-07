@@ -25,7 +25,7 @@ ReplayerWindow::ReplayerWindow(const std::array<uint32_t, 2>& in_extents,
                                ReplayerSnapshotter*           in_snapshotter_ptr,
                                ReplayerSnapshotPlayer*        in_snapshot_player_ptr)
     :m_extents                      {in_extents.at(0), in_extents.at(1) + SCROLLBAR_HEIGHT},
-     m_replay_segment_end_normalized(1.0f),
+     m_n_last_api_command_to_execute(0),
      m_snapshot_player_ptr          (in_snapshot_player_ptr),
      m_snapshotter_ptr              (in_snapshotter_ptr),
      m_window_ptr                   (nullptr),
@@ -86,6 +86,7 @@ void ReplayerWindow::execute()
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_DEPTH_BITS,            32);
 
     // Create window with graphics context
     m_window_ptr = glfwCreateWindow(m_extents.at(0),
@@ -140,15 +141,20 @@ void ReplayerWindow::execute()
         {
             GLIDToTexturePropsMapUniquePtr new_snapshot_gl_id_to_texture_props_map_ptr;
             ReplayerSnapshotUniquePtr      new_snapshot_ptr;
+            U8VecUniquePtr                 new_snapshot_prev_frame_depth_data_u8_vec_ptr;
             GLContextStateUniquePtr        new_snapshot_start_gl_context_state_ptr;
 
             if (m_snapshotter_ptr->pop_snapshot(&new_snapshot_start_gl_context_state_ptr,
                                                 &new_snapshot_ptr,
-                                                &new_snapshot_gl_id_to_texture_props_map_ptr) )
+                                                &new_snapshot_gl_id_to_texture_props_map_ptr,
+                                                &new_snapshot_prev_frame_depth_data_u8_vec_ptr) )
             {
+                m_n_last_api_command_to_execute = new_snapshot_ptr->get_n_api_commands() - 1;
+
                 m_snapshot_player_ptr->load_snapshot(std::move(new_snapshot_start_gl_context_state_ptr),
                                                      std::move(new_snapshot_ptr),
-                                                     std::move(new_snapshot_gl_id_to_texture_props_map_ptr) );
+                                                     std::move(new_snapshot_gl_id_to_texture_props_map_ptr),
+                                                     std::move(new_snapshot_prev_frame_depth_data_u8_vec_ptr) );
             }
         }
 
@@ -157,7 +163,7 @@ void ReplayerWindow::execute()
 
             if (is_snapshot_loaded)
             {
-                m_snapshot_player_ptr->play_snapshot(m_replay_segment_end_normalized);
+                m_snapshot_player_ptr->play_snapshot(m_n_last_api_command_to_execute);
             }
             else
             {
@@ -201,14 +207,14 @@ void ReplayerWindow::execute()
                                  ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
                     {
                         ImGui::PushItemWidth(-1);
-                        ImGui::SliderFloat  ("##Slider",
-                                            &m_replay_segment_end_normalized,
-                                             0.0f,
-                                             1.0f);
+                        ImGui::SliderInt   ("##Slider",
+                                            &m_n_last_api_command_to_execute,
+                                             0,
+                                             m_snapshot_player_ptr->get_current_snapshot_ptr()->get_n_api_commands() );
                         ImGui::PopItemWidth ();
 
-                        ImGui::SetWindowPos (ImVec2(0,         0) );
-                        ImGui::SetWindowSize(ImVec2(display_w, SCROLLBAR_HEIGHT) );
+                        ImGui::SetWindowPos (ImVec2(0,                             0) );
+                        ImGui::SetWindowSize(ImVec2(static_cast<float>(display_w), SCROLLBAR_HEIGHT) );
                     }
                     ImGui::End();
                 }

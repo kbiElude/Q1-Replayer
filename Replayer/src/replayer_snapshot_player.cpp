@@ -3,6 +3,7 @@
  * This code is licensed under MIT license (see LICENSE.txt for details)
  */
 #include "OpenGL/globals.h"
+#include "replayer.h"
 #include "replayer_snapshot_logger.h"
 #include "replayer_snapshot_player.h"
 #include <algorithm>
@@ -13,8 +14,10 @@
 #endif
 
 
-ReplayerSnapshotPlayer::ReplayerSnapshotPlayer(ReplayerSnapshotLogger* in_snapshot_logger_ptr)
-    :m_snapshot_initialized(false),
+ReplayerSnapshotPlayer::ReplayerSnapshotPlayer(ReplayerSnapshotLogger* in_snapshot_logger_ptr,
+                                               const Replayer*         in_replayer_ptr)
+    :m_replayer_ptr        (in_replayer_ptr),
+     m_snapshot_initialized(false),
      m_snapshot_logger_ptr (in_snapshot_logger_ptr)
 {
     /* Stub */
@@ -25,9 +28,11 @@ ReplayerSnapshotPlayer::~ReplayerSnapshotPlayer()
     /* Stub */
 }
 
-ReplayerSnapshotPlayerUniquePtr ReplayerSnapshotPlayer::create(ReplayerSnapshotLogger* in_snapshot_logger_ptr)
+ReplayerSnapshotPlayerUniquePtr ReplayerSnapshotPlayer::create(ReplayerSnapshotLogger* in_snapshot_logger_ptr,
+                                                               const Replayer*         in_replayer_ptr)
 {
-    ReplayerSnapshotPlayerUniquePtr result_ptr(new ReplayerSnapshotPlayer(in_snapshot_logger_ptr) );
+    ReplayerSnapshotPlayerUniquePtr result_ptr(new ReplayerSnapshotPlayer(in_snapshot_logger_ptr,
+                                                                          in_replayer_ptr) );
 
     assert(result_ptr != nullptr);
     return result_ptr;
@@ -40,12 +45,14 @@ bool ReplayerSnapshotPlayer::is_snapshot_loaded() const
 
 void ReplayerSnapshotPlayer::load_snapshot(GLContextStateUniquePtr        in_start_context_state_ptr,
                                            ReplayerSnapshotUniquePtr      in_snapshot_ptr,
-                                           GLIDToTexturePropsMapUniquePtr in_snapshot_gl_id_to_texture_props_map_ptr)
+                                           GLIDToTexturePropsMapUniquePtr in_snapshot_gl_id_to_texture_props_map_ptr,
+                                           U8VecUniquePtr                 in_snapshot_prev_frame_depth_data_u8_vec_ptr)
 {
-    m_snapshot_gl_id_to_texture_props_map_ptr = std::move(in_snapshot_gl_id_to_texture_props_map_ptr);
-    m_snapshot_initialized                    = false;
-    m_snapshot_ptr                            = std::move(in_snapshot_ptr);
-    m_snapshot_start_gl_context_state_ptr     = std::move(in_start_context_state_ptr);
+    m_snapshot_gl_id_to_texture_props_map_ptr   = std::move(in_snapshot_gl_id_to_texture_props_map_ptr);
+    m_snapshot_initialized                      = false;
+    m_snapshot_prev_frame_depth_data_u8_vec_ptr = std::move(in_snapshot_prev_frame_depth_data_u8_vec_ptr);
+    m_snapshot_ptr                              = std::move(in_snapshot_ptr);
+    m_snapshot_start_gl_context_state_ptr       = std::move(in_start_context_state_ptr);
 
     {
         std::vector<uint32_t> gl_texture_id_vec;
@@ -68,13 +75,13 @@ void ReplayerSnapshotPlayer::load_snapshot(GLContextStateUniquePtr        in_sta
                                         m_snapshot_gl_id_to_texture_props_map_ptr.get() );
 }
 
-void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_normalized)
+void ReplayerSnapshotPlayer::play_snapshot(const uint32_t& in_n_last_api_command_to_execute)
 {
     assert(m_snapshot_ptr != nullptr);
 
     const auto n_api_commands             = m_snapshot_ptr->get_n_api_commands();
-    const auto n_last_api_command_to_play = std::min                          (n_api_commands,
-                                                                               static_cast<uint32_t>(n_api_commands * in_playback_segment_end_normalized) );
+    const auto n_last_api_command_to_play = std::min(in_n_last_api_command_to_execute,
+                                                     n_api_commands - 1);
 
     if (!m_snapshot_initialized)
     {
@@ -92,36 +99,54 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
             assert(texture_props_ptr->type == TextureType::_2D);
 
             /* Initialize the textures used by snapshot */
-            reinterpret_cast<PFNGLGENTEXTURESPROC>(OpenGL::g_cached_gl_gen_textures)(1,
-                                                                                    &new_texture_id);
-
-            assert(m_snapshot_texture_gl_id_to_texture_gl_id_map.find(reference_texture_id) == m_snapshot_texture_gl_id_to_texture_gl_id_map.end() );
-            assert(new_texture_id                                                           != 0);
-
-            m_snapshot_texture_gl_id_to_texture_gl_id_map[reference_texture_id] = new_texture_id;
-
-            reinterpret_cast<PFNGLBINDTEXTUREPROC>(OpenGL::g_cached_gl_bind_texture)(GL_TEXTURE_2D,
-                                                                                     new_texture_id);
-
-            for (uint32_t n_mip = 0;
-                          n_mip < texture_n_mips;
-                        ++n_mip)
+            if (m_snapshot_texture_gl_id_to_texture_gl_id_map.find(reference_texture_id) == m_snapshot_texture_gl_id_to_texture_gl_id_map.end() )
             {
-                const auto texture_mip_props_ptr = &texture_props_ptr->mip_props_vec.at(n_mip);
+                reinterpret_cast<PFNGLGENTEXTURESPROC>(OpenGL::g_cached_gl_gen_textures)(1,
+                                                                                        &new_texture_id);
 
-                reinterpret_cast<PFNGLTEXIMAGE2DPROC>(OpenGL::g_cached_gl_tex_image_2d)(GL_TEXTURE_2D,
-                                                                                        n_mip,
-                                                                                        texture_props_ptr->internal_format,
-                                                                                        texture_mip_props_ptr->mip_size_u32vec3.at(0),
-                                                                                        texture_mip_props_ptr->mip_size_u32vec3.at(1),
-                                                                                        texture_props_ptr->border,
-                                                                                        texture_mip_props_ptr->format,
-                                                                                        texture_mip_props_ptr->type,
-                                                                                        texture_mip_props_ptr->data_u8_vec.data() );
+                assert(new_texture_id != 0);
+
+                m_snapshot_texture_gl_id_to_texture_gl_id_map[reference_texture_id] = new_texture_id;
+
+                reinterpret_cast<PFNGLBINDTEXTUREPROC>(OpenGL::g_cached_gl_bind_texture)(GL_TEXTURE_2D,
+                                                                                         new_texture_id);
+
+                for (uint32_t n_mip = 0;
+                              n_mip < texture_n_mips;
+                            ++n_mip)
+                {
+                    const auto texture_mip_props_ptr = &texture_props_ptr->mip_props_vec.at(n_mip);
+
+                    reinterpret_cast<PFNGLTEXIMAGE2DPROC>(OpenGL::g_cached_gl_tex_image_2d)(GL_TEXTURE_2D,
+                                                                                            n_mip,
+                                                                                            texture_mip_props_ptr->internal_format,
+                                                                                            texture_mip_props_ptr->mip_size_u32vec3.at(0),
+                                                                                            texture_mip_props_ptr->mip_size_u32vec3.at(1),
+                                                                                            texture_props_ptr->border,
+                                                                                            texture_mip_props_ptr->format,
+                                                                                            texture_mip_props_ptr->type,
+                                                                                            texture_mip_props_ptr->data_u8_vec.data() );
+                }
             }
         }
 
         m_snapshot_initialized = true;
+    }
+
+    /* Fill depth buffer with data cached from the preceding frame.. */
+    reinterpret_cast<PFNGLCLEARPROC>(OpenGL::g_cached_gl_clear)(GL_COLOR_BUFFER_BIT);
+
+    {
+        const auto q1_window_extents = m_replayer_ptr->get_q1_window_extents();
+
+        reinterpret_cast<PFNGLDRAWBUFFERPROC> (OpenGL::g_cached_gl_draw_buffer) (GL_BACK);
+        reinterpret_cast<PFNGLPIXELSTOREIPROC>(OpenGL::g_cached_gl_pixel_storei)(GL_UNPACK_ALIGNMENT,
+                                                                                 1);
+        reinterpret_cast<PFNGLDRAWPIXELSPROC> (OpenGL::g_cached_gl_draw_pixels) (q1_window_extents.at(0),
+                                                                                 q1_window_extents.at(1),
+                                                                                 GL_DEPTH_COMPONENT,
+                                                                                 GL_FLOAT,
+                                                                                 m_snapshot_prev_frame_depth_data_u8_vec_ptr->data() );
     }
 
     /* Set up global state. */
@@ -221,13 +246,12 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
         }
     }
 
-    reinterpret_cast<PFNGLCLEARPROC>(OpenGL::g_cached_gl_clear)(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+    /* Go ahead and replay the snapshot. */
     {
         bool is_begin_active = false;
 
         for (uint32_t n_api_command = 0;
-                      n_api_command < n_last_api_command_to_play;
+                      n_api_command <= n_last_api_command_to_play;
                     ++n_api_command)
         {
             const auto api_command_ptr = m_snapshot_ptr->get_api_command_ptr(n_api_command);
@@ -236,15 +260,15 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
             {
                 case APIInterceptor::APIFUNCTION_GL_GLALPHAFUNC:
                 {
-                    reinterpret_cast<PFNGLALPHAFUNCPROC>(OpenGL::g_cached_gl_alpha_func)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
-                                                                                         api_command_ptr->api_arg_vec.at(1).value.value_fp32);
+                    reinterpret_cast<PFNGLALPHAFUNCPROC>(OpenGL::g_cached_gl_alpha_func)(api_command_ptr->api_arg_vec.at(0).get_u32 (),
+                                                                                         api_command_ptr->api_arg_vec.at(1).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLBEGIN:
                 {
-                    reinterpret_cast<PFNGLBEGINPROC>(OpenGL::g_cached_gl_begin)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+                    reinterpret_cast<PFNGLBEGINPROC>(OpenGL::g_cached_gl_begin)(api_command_ptr->api_arg_vec.at(0).get_u32() );
 
                     is_begin_active = true;
                     break;
@@ -252,10 +276,10 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
 
                 case APIInterceptor::APIFUNCTION_GL_GLBINDTEXTURE:
                 {
-                    const auto snapshot_texture_id = api_command_ptr->api_arg_vec.at(1).value.value_u32;
+                    const auto snapshot_texture_id = api_command_ptr->api_arg_vec.at(1).get_u32      ();
                     const auto this_texture_id     = m_snapshot_texture_gl_id_to_texture_gl_id_map.at(snapshot_texture_id);
 
-                    reinterpret_cast<PFNGLBINDTEXTUREPROC>(OpenGL::g_cached_gl_bind_texture)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
+                    reinterpret_cast<PFNGLBINDTEXTUREPROC>(OpenGL::g_cached_gl_bind_texture)(api_command_ptr->api_arg_vec.at(0).get_u32(),
                                                                                              this_texture_id);
 
                     break;
@@ -263,110 +287,112 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
 
                 case APIInterceptor::APIFUNCTION_GL_GLBLENDFUNC:
                 {
-                    reinterpret_cast<PFNGLBLENDFUNCPROC>(OpenGL::g_cached_gl_blend_func)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
-                                                                                         api_command_ptr->api_arg_vec.at(1).value.value_u32);
+                    reinterpret_cast<PFNGLBLENDFUNCPROC>(OpenGL::g_cached_gl_blend_func)(api_command_ptr->api_arg_vec.at(0).get_u32() ,
+                                                                                         api_command_ptr->api_arg_vec.at(1).get_u32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLCLEAR:
                 {
-                    reinterpret_cast<PFNGLCLEARPROC>(OpenGL::g_cached_gl_clear)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+                    reinterpret_cast<PFNGLCLEARPROC>(OpenGL::g_cached_gl_clear)(api_command_ptr->api_arg_vec.at(0).get_u32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLCLEARCOLOR:
                 {
-                    reinterpret_cast<PFNGLCLEARCOLORPROC>(OpenGL::g_cached_gl_clear_color)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
-                                                                                           api_command_ptr->api_arg_vec.at(1).value.value_fp32,
-                                                                                           api_command_ptr->api_arg_vec.at(2).value.value_fp32,
-                                                                                           api_command_ptr->api_arg_vec.at(3).value.value_fp32);
+                    reinterpret_cast<PFNGLCLEARCOLORPROC>(OpenGL::g_cached_gl_clear_color)(api_command_ptr->api_arg_vec.at(0).get_fp32(),
+                                                                                           api_command_ptr->api_arg_vec.at(1).get_fp32(),
+                                                                                           api_command_ptr->api_arg_vec.at(2).get_fp32(),
+                                                                                           api_command_ptr->api_arg_vec.at(3).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLCLEARDEPTH:
                 {
-                    reinterpret_cast<PFNGLCLEARDEPTHPROC>(OpenGL::g_cached_gl_clear_depth)(api_command_ptr->api_arg_vec.at(0).value.value_fp64);
+                    reinterpret_cast<PFNGLCLEARDEPTHPROC>(OpenGL::g_cached_gl_clear_depth)(api_command_ptr->api_arg_vec.at(0).get_fp64() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLCOLOR3F:
                 {
-                    reinterpret_cast<PFNGLCOLOR3FPROC>(OpenGL::g_cached_gl_color_3f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
-                                                                                     api_command_ptr->api_arg_vec.at(1).value.value_fp32,
-                                                                                     api_command_ptr->api_arg_vec.at(2).value.value_fp32);
+                    reinterpret_cast<PFNGLCOLOR3FPROC>(OpenGL::g_cached_gl_color_3f)(api_command_ptr->api_arg_vec.at(0).get_fp32(),
+                                                                                     api_command_ptr->api_arg_vec.at(1).get_fp32(),
+                                                                                     api_command_ptr->api_arg_vec.at(2).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLCOLOR3UB:
                 {
-                    reinterpret_cast<PFNGLCOLOR3UBPROC>(OpenGL::g_cached_gl_color_3ub)(api_command_ptr->api_arg_vec.at(0).value.value_u8,
-                                                                                       api_command_ptr->api_arg_vec.at(1).value.value_u8,
-                                                                                       api_command_ptr->api_arg_vec.at(2).value.value_u8);
+                    reinterpret_cast<PFNGLCOLOR3UBPROC>(OpenGL::g_cached_gl_color_3ub)(api_command_ptr->api_arg_vec.at(0).get_u8(),
+                                                                                       api_command_ptr->api_arg_vec.at(1).get_u8(),
+                                                                                       api_command_ptr->api_arg_vec.at(2).get_u8() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLCOLOR4F:
                 {
-                    reinterpret_cast<PFNGLCOLOR4FPROC>(OpenGL::g_cached_gl_color_4f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
-                                                                                     api_command_ptr->api_arg_vec.at(1).value.value_fp32,
-                                                                                     api_command_ptr->api_arg_vec.at(2).value.value_fp32,
-                                                                                     api_command_ptr->api_arg_vec.at(3).value.value_fp32);
+                    reinterpret_cast<PFNGLCOLOR4FPROC>(OpenGL::g_cached_gl_color_4f)(api_command_ptr->api_arg_vec.at(0).get_fp32(),
+                                                                                     api_command_ptr->api_arg_vec.at(1).get_fp32(),
+                                                                                     api_command_ptr->api_arg_vec.at(2).get_fp32(),
+                                                                                     api_command_ptr->api_arg_vec.at(3).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLCULLFACE:
                 {
-                    reinterpret_cast<PFNGLCULLFACEPROC>(OpenGL::g_cached_gl_cull_face)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+                    reinterpret_cast<PFNGLCULLFACEPROC>(OpenGL::g_cached_gl_cull_face)(api_command_ptr->api_arg_vec.at(0).get_u32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLDEPTHFUNC:
                 {
-                    reinterpret_cast<PFNGLDEPTHFUNCPROC>(OpenGL::g_cached_gl_depth_func)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+                    reinterpret_cast<PFNGLDEPTHFUNCPROC>(OpenGL::g_cached_gl_depth_func)(api_command_ptr->api_arg_vec.at(0).get_u32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLDEPTHMASK:
                 {
-                    reinterpret_cast<PFNGLDEPTHMASKPROC>(OpenGL::g_cached_gl_depth_mask)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+                    reinterpret_cast<PFNGLDEPTHMASKPROC>(OpenGL::g_cached_gl_depth_mask)(api_command_ptr->api_arg_vec.at(0).get_u32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLDEPTHRANGE:
                 {
-                    reinterpret_cast<PFNGLDEPTHRANGEPROC>(OpenGL::g_cached_gl_depth_range)(api_command_ptr->api_arg_vec.at(0).value.value_fp64,
-                                                                                           api_command_ptr->api_arg_vec.at(1).value.value_fp64);
+                    reinterpret_cast<PFNGLDEPTHRANGEPROC>(OpenGL::g_cached_gl_depth_range)(api_command_ptr->api_arg_vec.at(0).get_fp64(),
+                                                                                           api_command_ptr->api_arg_vec.at(1).get_fp64() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLDISABLE:
                 {
-                    reinterpret_cast<PFNGLDISABLEPROC>(OpenGL::g_cached_gl_disable)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+                    reinterpret_cast<PFNGLDISABLEPROC>(OpenGL::g_cached_gl_disable)(api_command_ptr->api_arg_vec.at(0).get_u32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLDRAWBUFFER:
                 {
-                    reinterpret_cast<PFNGLDRAWBUFFERPROC>(OpenGL::g_cached_gl_draw_buffer)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+                    reinterpret_cast<PFNGLDRAWBUFFERPROC>(OpenGL::g_cached_gl_draw_buffer)(api_command_ptr->api_arg_vec.at(0).get_u32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLENABLE:
                 {
-                    reinterpret_cast<PFNGLENABLEPROC>(OpenGL::g_cached_gl_enable)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+                    const auto cap = api_command_ptr->api_arg_vec.at(0).get_u32();
+
+                    reinterpret_cast<PFNGLENABLEPROC>(OpenGL::g_cached_gl_enable)(cap);
 
                     break;
                 }
@@ -395,19 +421,19 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
 
                 case APIInterceptor::APIFUNCTION_GL_GLFRONTFACE:
                 {
-                    reinterpret_cast<PFNGLFRONTFACEPROC>(OpenGL::g_cached_gl_front_face)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+                    reinterpret_cast<PFNGLFRONTFACEPROC>(OpenGL::g_cached_gl_front_face)(api_command_ptr->api_arg_vec.at(0).get_u32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLFRUSTUM:
                 {
-                    reinterpret_cast<PFNGLFRUSTUMPROC>(OpenGL::g_cached_gl_frustum)(api_command_ptr->api_arg_vec.at(0).value.value_fp64,
-                                                                                    api_command_ptr->api_arg_vec.at(1).value.value_fp64,
-                                                                                    api_command_ptr->api_arg_vec.at(2).value.value_fp64,
-                                                                                    api_command_ptr->api_arg_vec.at(3).value.value_fp64,
-                                                                                    api_command_ptr->api_arg_vec.at(4).value.value_fp64,
-                                                                                    api_command_ptr->api_arg_vec.at(5).value.value_fp64);
+                    reinterpret_cast<PFNGLFRUSTUMPROC>(OpenGL::g_cached_gl_frustum)(api_command_ptr->api_arg_vec.at(0).get_fp64(),
+                                                                                    api_command_ptr->api_arg_vec.at(1).get_fp64(),
+                                                                                    api_command_ptr->api_arg_vec.at(2).get_fp64(),
+                                                                                    api_command_ptr->api_arg_vec.at(3).get_fp64(),
+                                                                                    api_command_ptr->api_arg_vec.at(4).get_fp64(),
+                                                                                    api_command_ptr->api_arg_vec.at(5).get_fp64() );
 
                     break;
                 }
@@ -421,19 +447,19 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
 
                 case APIInterceptor::APIFUNCTION_GL_GLMATRIXMODE:
                 {
-                    reinterpret_cast<PFNGLMATRIXMODEPROC>(OpenGL::g_cached_gl_matrix_mode)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+                    reinterpret_cast<PFNGLMATRIXMODEPROC>(OpenGL::g_cached_gl_matrix_mode)(api_command_ptr->api_arg_vec.at(0).get_u32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLORTHO:
                 {
-                    reinterpret_cast<PFNGLORTHOPROC>(OpenGL::g_cached_gl_ortho)(api_command_ptr->api_arg_vec.at(0).value.value_fp64,
-                                                                                api_command_ptr->api_arg_vec.at(1).value.value_fp64,
-                                                                                api_command_ptr->api_arg_vec.at(2).value.value_fp64,
-                                                                                api_command_ptr->api_arg_vec.at(3).value.value_fp64,
-                                                                                api_command_ptr->api_arg_vec.at(4).value.value_fp64,
-                                                                                api_command_ptr->api_arg_vec.at(5).value.value_fp64);
+                    reinterpret_cast<PFNGLORTHOPROC>(OpenGL::g_cached_gl_ortho)(api_command_ptr->api_arg_vec.at(0).get_fp64(),
+                                                                                api_command_ptr->api_arg_vec.at(1).get_fp64(),
+                                                                                api_command_ptr->api_arg_vec.at(2).get_fp64(),
+                                                                                api_command_ptr->api_arg_vec.at(3).get_fp64(),
+                                                                                api_command_ptr->api_arg_vec.at(4).get_fp64(),
+                                                                                api_command_ptr->api_arg_vec.at(5).get_fp64() );
 
                     break;
                 }
@@ -461,113 +487,113 @@ void ReplayerSnapshotPlayer::play_snapshot(const float& in_playback_segment_end_
 
                 case APIInterceptor::APIFUNCTION_GL_GLROTATEF:
                 {
-                    reinterpret_cast<PFNGLROTATEFPROC>(OpenGL::g_cached_gl_rotate_f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
-                                                                                     api_command_ptr->api_arg_vec.at(1).value.value_fp32,
-                                                                                     api_command_ptr->api_arg_vec.at(2).value.value_fp32,
-                                                                                     api_command_ptr->api_arg_vec.at(3).value.value_fp32);
+                    reinterpret_cast<PFNGLROTATEFPROC>(OpenGL::g_cached_gl_rotate_f)(api_command_ptr->api_arg_vec.at(0).get_fp32(),
+                                                                                     api_command_ptr->api_arg_vec.at(1).get_fp32(),
+                                                                                     api_command_ptr->api_arg_vec.at(2).get_fp32(),
+                                                                                     api_command_ptr->api_arg_vec.at(3).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLSCALEF:
                 {
-                    reinterpret_cast<PFNGLSCALEFPROC>(OpenGL::g_cached_gl_scale_f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
-                                                                                   api_command_ptr->api_arg_vec.at(1).value.value_fp32,
-                                                                                   api_command_ptr->api_arg_vec.at(2).value.value_fp32);
+                    reinterpret_cast<PFNGLSCALEFPROC>(OpenGL::g_cached_gl_scale_f)(api_command_ptr->api_arg_vec.at(0).get_fp32(),
+                                                                                   api_command_ptr->api_arg_vec.at(1).get_fp32(),
+                                                                                   api_command_ptr->api_arg_vec.at(2).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLSHADEMODEL:
                 {
-                    reinterpret_cast<PFNGLSHADEMODELPROC>(OpenGL::g_cached_gl_shade_model)(api_command_ptr->api_arg_vec.at(0).value.value_u32);
+                    reinterpret_cast<PFNGLSHADEMODELPROC>(OpenGL::g_cached_gl_shade_model)(api_command_ptr->api_arg_vec.at(0).get_u32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLTEXCOORD2F:
                 {
-                    reinterpret_cast<PFNGLTEXCOORD2FPROC>(OpenGL::g_cached_gl_tex_coord_2f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
-                                                                                            api_command_ptr->api_arg_vec.at(1).value.value_fp32);
+                    reinterpret_cast<PFNGLTEXCOORD2FPROC>(OpenGL::g_cached_gl_tex_coord_2f)(api_command_ptr->api_arg_vec.at(0).get_fp32(),
+                                                                                            api_command_ptr->api_arg_vec.at(1).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLTEXENVF:
                 {
-                    reinterpret_cast<PFNGLTEXENVFPROC>(OpenGL::g_cached_gl_tex_env_f)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
-                                                                                      api_command_ptr->api_arg_vec.at(1).value.value_u32,
-                                                                                      api_command_ptr->api_arg_vec.at(2).value.value_fp32);
+                    reinterpret_cast<PFNGLTEXENVFPROC>(OpenGL::g_cached_gl_tex_env_f)(api_command_ptr->api_arg_vec.at(0).get_u32 (),
+                                                                                      api_command_ptr->api_arg_vec.at(1).get_u32 (),
+                                                                                      api_command_ptr->api_arg_vec.at(2).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLTEXIMAGE2D:
                 {
-                    reinterpret_cast<PFNGLTEXIMAGE2DPROC>(OpenGL::g_cached_gl_tex_image_2d)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
-                                                                                            api_command_ptr->api_arg_vec.at(1).value.value_i32,
-                                                                                            api_command_ptr->api_arg_vec.at(2).value.value_i32,
-                                                                                            api_command_ptr->api_arg_vec.at(3).value.value_i32,
-                                                                                            api_command_ptr->api_arg_vec.at(4).value.value_i32,
-                                                                                            api_command_ptr->api_arg_vec.at(5).value.value_i32,
-                                                                                            api_command_ptr->api_arg_vec.at(6).value.value_u32,
-                                                                                            api_command_ptr->api_arg_vec.at(7).value.value_u32,
-                                                                                            api_command_ptr->api_arg_vec.at(8).value.value_ptr);
+                    reinterpret_cast<PFNGLTEXIMAGE2DPROC>(OpenGL::g_cached_gl_tex_image_2d)(api_command_ptr->api_arg_vec.at(0).get_u32(),
+                                                                                            api_command_ptr->api_arg_vec.at(1).get_i32(),
+                                                                                            api_command_ptr->api_arg_vec.at(2).get_i32(),
+                                                                                            api_command_ptr->api_arg_vec.at(3).get_i32(),
+                                                                                            api_command_ptr->api_arg_vec.at(4).get_i32(),
+                                                                                            api_command_ptr->api_arg_vec.at(5).get_i32(),
+                                                                                            api_command_ptr->api_arg_vec.at(6).get_u32(),
+                                                                                            api_command_ptr->api_arg_vec.at(7).get_u32(),
+                                                                                            api_command_ptr->api_arg_vec.at(8).get_ptr() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLTEXPARAMETERF:
                 {
-                    reinterpret_cast<PFNGLTEXPARAMETERFPROC>(OpenGL::g_cached_gl_tex_parameterf)(api_command_ptr->api_arg_vec.at(0).value.value_u32,
-                                                                                                 api_command_ptr->api_arg_vec.at(1).value.value_u32,
-                                                                                                 api_command_ptr->api_arg_vec.at(2).value.value_fp32);
+                    reinterpret_cast<PFNGLTEXPARAMETERFPROC>(OpenGL::g_cached_gl_tex_parameterf)(api_command_ptr->api_arg_vec.at(0).get_u32 (),
+                                                                                                 api_command_ptr->api_arg_vec.at(1).get_u32 (),
+                                                                                                 api_command_ptr->api_arg_vec.at(2).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLTRANSLATEF:
                 {
-                    reinterpret_cast<PFNGLTRANSLATEFPROC>(OpenGL::g_cached_gl_translate_f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
-                                                                                           api_command_ptr->api_arg_vec.at(1).value.value_fp32,
-                                                                                           api_command_ptr->api_arg_vec.at(2).value.value_fp32);
+                    reinterpret_cast<PFNGLTRANSLATEFPROC>(OpenGL::g_cached_gl_translate_f)(api_command_ptr->api_arg_vec.at(0).get_fp32(),
+                                                                                           api_command_ptr->api_arg_vec.at(1).get_fp32(),
+                                                                                           api_command_ptr->api_arg_vec.at(2).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLVERTEX2F:
                 {
-                    reinterpret_cast<PFNGLVERTEX2FPROC>(OpenGL::g_cached_gl_vertex_2f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
-                                                                                       api_command_ptr->api_arg_vec.at(1).value.value_fp32);
+                    reinterpret_cast<PFNGLVERTEX2FPROC>(OpenGL::g_cached_gl_vertex_2f)(api_command_ptr->api_arg_vec.at(0).get_fp32(),
+                                                                                       api_command_ptr->api_arg_vec.at(1).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLVERTEX3F:
                 {
-                    reinterpret_cast<PFNGLVERTEX3FPROC>(OpenGL::g_cached_gl_vertex_3f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
-                                                                                       api_command_ptr->api_arg_vec.at(1).value.value_fp32,
-                                                                                       api_command_ptr->api_arg_vec.at(2).value.value_fp32);
+                    reinterpret_cast<PFNGLVERTEX3FPROC>(OpenGL::g_cached_gl_vertex_3f)(api_command_ptr->api_arg_vec.at(0).get_fp32(),
+                                                                                       api_command_ptr->api_arg_vec.at(1).get_fp32(),
+                                                                                       api_command_ptr->api_arg_vec.at(2).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLVERTEX4F:
                 {
-                    reinterpret_cast<PFNGLVERTEX4FPROC>(OpenGL::g_cached_gl_vertex_4f)(api_command_ptr->api_arg_vec.at(0).value.value_fp32,
-                                                                                       api_command_ptr->api_arg_vec.at(1).value.value_fp32,
-                                                                                       api_command_ptr->api_arg_vec.at(2).value.value_fp32,
-                                                                                       api_command_ptr->api_arg_vec.at(3).value.value_fp32);
+                    reinterpret_cast<PFNGLVERTEX4FPROC>(OpenGL::g_cached_gl_vertex_4f)(api_command_ptr->api_arg_vec.at(0).get_fp32(),
+                                                                                       api_command_ptr->api_arg_vec.at(1).get_fp32(),
+                                                                                       api_command_ptr->api_arg_vec.at(2).get_fp32(),
+                                                                                       api_command_ptr->api_arg_vec.at(3).get_fp32() );
 
                     break;
                 }
 
                 case APIInterceptor::APIFUNCTION_GL_GLVIEWPORT:
                 {
-                    reinterpret_cast<PFNGLVIEWPORTPROC>(OpenGL::g_cached_gl_viewport)(api_command_ptr->api_arg_vec.at(0).value.value_i32,
-                                                                                      api_command_ptr->api_arg_vec.at(1).value.value_i32,
-                                                                                      api_command_ptr->api_arg_vec.at(2).value.value_i32,
-                                                                                      api_command_ptr->api_arg_vec.at(3).value.value_i32);
+                    reinterpret_cast<PFNGLVIEWPORTPROC>(OpenGL::g_cached_gl_viewport)(api_command_ptr->api_arg_vec.at(0).get_i32(),
+                                                                                      api_command_ptr->api_arg_vec.at(1).get_i32(),
+                                                                                      api_command_ptr->api_arg_vec.at(2).get_i32(),
+                                                                                      api_command_ptr->api_arg_vec.at(3).get_i32() );
 
                     break;
                 }
