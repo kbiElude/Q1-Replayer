@@ -21,10 +21,11 @@ static void glfw_error_callback(int         error,
 }
 
 ReplayerAPICallWindow::ReplayerAPICallWindow(Replayer* in_replayer_ptr)
-    :m_replayer_ptr          (in_replayer_ptr),
-     m_snapshot_ptr          (nullptr),
-     m_window_ptr            (nullptr),
-     m_worker_thread_must_die(false)
+    :m_replayer_ptr                    (in_replayer_ptr),
+     m_should_draw_screenspace_geometry(true),
+     m_snapshot_ptr                    (nullptr),
+     m_window_ptr                      (nullptr),
+     m_worker_thread_must_die          (false)
 {
     /* Stub */
 }
@@ -168,13 +169,15 @@ void ReplayerAPICallWindow::execute()
                                               n_api_command < n_api_commands;
                                             ++n_api_command)
                                 {
-                                    command_adjusted |= ImGui::Checkbox("##",
-                                                                        command_enabled_bool_ptr + n_api_command);
-
-                                    ImGui::SameLine ();
+                                    bool status = command_enabled_bool_ptr[n_api_command];
 
                                     command_adjusted |= ImGui::Selectable(m_api_command_vec.at(n_api_command).c_str(),
-                                                                          command_enabled_bool_ptr + n_api_command);
+                                                                         &status);
+
+                                    if (status != command_enabled_bool_ptr[n_api_command])
+                                    {
+                                        command_enabled_bool_ptr[n_api_command] = status;
+                                    }
                                 }
 
                                 if (command_adjusted)
@@ -183,6 +186,14 @@ void ReplayerAPICallWindow::execute()
                                 }
                             }
                             ImGui::EndListBox();
+
+                            ImGui::NewLine ();
+
+                            if (ImGui::Checkbox("Draw screen-space geometry",
+                                                &m_should_draw_screenspace_geometry) )
+                            {
+                                m_replayer_ptr->refresh_windows();
+                            }
                         }
                         ImGui::End();
                     }

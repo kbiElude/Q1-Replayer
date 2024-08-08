@@ -113,7 +113,8 @@ bool Replayer::init()
 {
     m_replayer_apicall_window_ptr  = ReplayerAPICallWindow::create (this);
     m_replayer_snapshot_logger_ptr = ReplayerSnapshotLogger::create();
-    m_replayer_snapshot_player_ptr = ReplayerSnapshotPlayer::create(this);
+    m_replayer_snapshot_player_ptr = ReplayerSnapshotPlayer::create(this,
+                                                                    m_replayer_apicall_window_ptr.get() );
     m_replayer_snapshotter_ptr     = ReplayerSnapshotter::create   (this);
     m_replayer_window_ptr          = ReplayerWindow::create        (get_q1_window_extents             (),
                                                                     this,

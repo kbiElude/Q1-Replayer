@@ -19,7 +19,8 @@ class ReplayerSnapshotPlayer
 {
 public:
     /* Public funcs */
-    static ReplayerSnapshotPlayerUniquePtr create(const Replayer* in_replayer_ptr);
+    static ReplayerSnapshotPlayerUniquePtr create(const Replayer*    in_replayer_ptr,
+                                                  const IUISettings* in_ui_settings_ptr);
 
     ~ReplayerSnapshotPlayer();
 
@@ -28,6 +29,7 @@ public:
                        const GLIDToTexturePropsMap* in_snapshot_gl_id_to_texture_props_map_ptr);
     void play_snapshot();
 
+    void analyze_snapshot          ();
     bool is_snapshot_available     ();
     void lock_for_snapshot_access  ();
     void unlock_for_snapshot_access();
@@ -36,13 +38,18 @@ private:
     /* Private type defs */
 
     /* Private funcs */
-    ReplayerSnapshotPlayer(const Replayer* in_replayer_ptr);
+    ReplayerSnapshotPlayer(const Replayer*    in_replayer_ptr,
+                           const IUISettings* in_ui_settings_ptr);
 
     /* Private vars */
     std::mutex m_mutex;
 
-    const Replayer*         m_replayer_ptr;
-    bool                    m_snapshot_initialized;
+    const Replayer*    m_replayer_ptr;
+    bool               m_snapshot_initialized;
+    const IUISettings* m_ui_settings_ptr;
+
+    uint32_t m_n_screen_space_geom_api_first_command;
+    uint32_t m_n_screen_space_geom_api_last_command;
 
     const GLIDToTexturePropsMap* m_snapshot_gl_id_to_texture_props_map_ptr;
     const ReplayerSnapshot*      m_snapshot_ptr;

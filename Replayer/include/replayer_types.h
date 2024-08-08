@@ -70,6 +70,18 @@ struct GLContextState
                    const uint32_t& in_q1_window_height);
 };
 
+class IUISettings
+{
+    /* Public funcs */
+public:
+    virtual ~IUISettings()
+    {
+        /* Stub */
+    }
+
+    virtual bool should_draw_screenspace_geometry() const = 0;
+};
+
 enum class TextureType : uint8_t
 {
     _1D,

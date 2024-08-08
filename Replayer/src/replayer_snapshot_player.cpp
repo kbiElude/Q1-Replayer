@@ -15,12 +15,16 @@
 #endif
 
 
-ReplayerSnapshotPlayer::ReplayerSnapshotPlayer(const Replayer* in_replayer_ptr)
+ReplayerSnapshotPlayer::ReplayerSnapshotPlayer(const Replayer*    in_replayer_ptr,
+                                               const IUISettings* in_ui_settings_ptr)
     :m_replayer_ptr                           (in_replayer_ptr),
+     m_n_screen_space_geom_api_first_command  (UINT32_MAX),
+     m_n_screen_space_geom_api_last_command   (UINT32_MAX),
      m_snapshot_gl_id_to_texture_props_map_ptr(nullptr),
      m_snapshot_initialized                   (false),
      m_snapshot_ptr                           (nullptr),
-     m_snapshot_start_gl_context_state_ptr    (nullptr)
+     m_snapshot_start_gl_context_state_ptr    (nullptr),
+     m_ui_settings_ptr                        (in_ui_settings_ptr)
 {
     /* Stub */
 }
@@ -30,9 +34,50 @@ ReplayerSnapshotPlayer::~ReplayerSnapshotPlayer()
     /* Stub */
 }
 
-ReplayerSnapshotPlayerUniquePtr ReplayerSnapshotPlayer::create(const Replayer* in_replayer_ptr)
+void ReplayerSnapshotPlayer::analyze_snapshot()
 {
-    ReplayerSnapshotPlayerUniquePtr result_ptr(new ReplayerSnapshotPlayer(in_replayer_ptr) );
+    assert(m_snapshot_ptr != nullptr);
+
+    const auto n_commands        = m_snapshot_ptr->get_n_api_commands   ();
+    const auto q1_window_extents = m_replayer_ptr->get_q1_window_extents();
+ 
+    // Any screen-space stuff is rendered in the final segment that starts with a glOrtho() call
+    // set to match window rendering viewport. Look for such a call, assuming there should ever
+    // be only one such instance in a snapshot.
+    {
+        for (uint32_t n_command = 0;
+                      n_command < n_commands;
+                    ++n_command)
+        {
+            const auto command_ptr = m_snapshot_ptr->get_api_command_ptr(n_command);
+
+            if (command_ptr->api_func == APIInterceptor::APIFunction::APIFUNCTION_GL_GLORTHO)
+            {
+                const auto left   = static_cast<uint32_t>(command_ptr->api_arg_vec.at(0).get_fp64() );
+                const auto right  = static_cast<uint32_t>(command_ptr->api_arg_vec.at(1).get_fp64() );
+                const auto bottom = static_cast<uint32_t>(command_ptr->api_arg_vec.at(2).get_fp64() );
+                const auto top    = static_cast<uint32_t>(command_ptr->api_arg_vec.at(3).get_fp64() );
+
+                if (left   == 0                       &&
+                    top    == 0                       &&
+                    right  == q1_window_extents.at(0) &&
+                    bottom == q1_window_extents.at(1) )
+                {
+                    m_n_screen_space_geom_api_first_command = n_command;
+                    m_n_screen_space_geom_api_last_command  = n_commands - 1;
+
+                    break;
+                }
+            }
+        }
+    }
+}
+
+ReplayerSnapshotPlayerUniquePtr ReplayerSnapshotPlayer::create(const Replayer*    in_replayer_ptr,
+                                                               const IUISettings* in_ui_settings_ptr)
+{
+    ReplayerSnapshotPlayerUniquePtr result_ptr(new ReplayerSnapshotPlayer(in_replayer_ptr,
+                                                                          in_ui_settings_ptr) );
 
     assert(result_ptr != nullptr);
     return result_ptr;
@@ -68,6 +113,9 @@ void ReplayerSnapshotPlayer::load_snapshot(const GLContextState*        in_start
 
         m_snapshot_texture_gl_id_to_texture_gl_id_map.clear();
     }
+
+    // Identify a number of segments important for us.
+    analyze_snapshot();
 }
 
 void ReplayerSnapshotPlayer::lock_for_snapshot_access()
@@ -280,6 +328,16 @@ void ReplayerSnapshotPlayer::play_snapshot()
             {
                 /* Skip playback of commands that have been disabled */
                 continue;
+            }
+
+            if (!m_ui_settings_ptr->should_draw_screenspace_geometry() )
+            {
+                /* Skip playback of commands responsible for rendering screen-space geom */
+                if (n_api_command >= m_n_screen_space_geom_api_first_command &&
+                    n_api_command <= m_n_screen_space_geom_api_last_command)
+                {
+                    continue;
+                }
             }
 
             switch (api_command_ptr->api_func)

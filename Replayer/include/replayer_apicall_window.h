@@ -15,7 +15,7 @@ class                                          ReplayerAPICallWindow;
 typedef std::unique_ptr<ReplayerAPICallWindow> ReplayerAPICallWindowUniquePtr;
 class                                          ReplayerSnapshot;
 
-class ReplayerAPICallWindow
+class ReplayerAPICallWindow : public IUISettings
 {
 public:
     /* Public consts */
@@ -33,15 +33,24 @@ public:
     static ReplayerAPICallWindowUniquePtr create(Replayer* in_replayer_ptr);
 
 private:
+    /* IUISettings funcs */
+    bool should_draw_screenspace_geometry() const final
+    {
+        return m_should_draw_screenspace_geometry;
+    }
+
     /* Private funcs */
     ReplayerAPICallWindow(Replayer* in_replayer_ptr);
 
+    void analyze_snapshot           ();
     void execute                    ();
     void update_api_command_list_vec();
 
     /* Private vars */
     std::array<uint32_t, 2> m_window_extents;
     std::array<uint32_t, 2> m_window_x1y1;
+
+    bool m_should_draw_screenspace_geometry;
 
     std::vector<std::string> m_api_command_vec;
     std::mutex               m_mutex;
