@@ -41,33 +41,72 @@ void ReplayerSnapshotPlayer::analyze_snapshot()
     const auto n_commands        = m_snapshot_ptr->get_n_api_commands   ();
     const auto q1_window_extents = m_replayer_ptr->get_q1_window_extents();
  
-    // Any screen-space stuff is rendered in the final segment that starts with a glOrtho() call
-    // set to match window rendering viewport. Look for such a call, assuming there should ever
-    // be only one such instance in a snapshot.
+    uint32_t n_ao_segment_start_command = UINT32_MAX;
+
+    m_ao_command_range_vec.clear();
+
+    for (uint32_t n_command = 0;
+                  n_command < n_commands;
+                ++n_command)
     {
-        for (uint32_t n_command = 0;
-                      n_command < n_commands;
-                    ++n_command)
+        const auto command_ptr = m_snapshot_ptr->get_api_command_ptr(n_command);
+
+        if (command_ptr->api_func == APIInterceptor::APIFunction::APIFUNCTION_GL_GLBLENDFUNC)
         {
-            const auto command_ptr = m_snapshot_ptr->get_api_command_ptr(n_command);
+            // Q1 appears to first render diffuse-only textures first, and then follow up with AO
+            // achieved by re-rendering the geometry rendered in the earlier pass(es) with a different
+            // AO texture enabled + special blending settings applied. This can be done multiple times
+            // in a single frame.
+            //
+            // This segment ends with the first glDisable(GL_BLEND) call encountered.
+            auto       next_command_ptr = m_snapshot_ptr->get_api_command_ptr(n_command + 1);
+            const auto sfactor          = static_cast<uint32_t>(command_ptr->api_arg_vec.at(0).get_u32() );
+            const auto dfactor          = static_cast<uint32_t>(command_ptr->api_arg_vec.at(1).get_u32() );
 
-            if (command_ptr->api_func == APIInterceptor::APIFunction::APIFUNCTION_GL_GLORTHO)
+            if (sfactor                    == GL_ZERO                                               &&
+                dfactor                    == GL_ONE_MINUS_SRC_COLOR                                &&
+                next_command_ptr->api_func == APIInterceptor::APIFunction::APIFUNCTION_GL_GLENABLE)
             {
-                const auto left   = static_cast<uint32_t>(command_ptr->api_arg_vec.at(0).get_fp64() );
-                const auto right  = static_cast<uint32_t>(command_ptr->api_arg_vec.at(1).get_fp64() );
-                const auto bottom = static_cast<uint32_t>(command_ptr->api_arg_vec.at(2).get_fp64() );
-                const auto top    = static_cast<uint32_t>(command_ptr->api_arg_vec.at(3).get_fp64() );
-
-                if (left   == 0                       &&
-                    top    == 0                       &&
-                    right  == q1_window_extents.at(0) &&
-                    bottom == q1_window_extents.at(1) )
+                if (n_ao_segment_start_command == UINT32_MAX)
                 {
-                    m_n_screen_space_geom_api_first_command = n_command;
-                    m_n_screen_space_geom_api_last_command  = n_commands - 1;
-
-                    break;
+                    n_ao_segment_start_command = n_command;
                 }
+                else
+                {
+                    assert(false);
+                }
+            }
+        }
+
+        if (command_ptr->api_func == APIInterceptor::APIFunction::APIFUNCTION_GL_GLDISABLE)
+        {
+            const auto cap = command_ptr->api_arg_vec.at(0).get_u32();
+
+            if (n_ao_segment_start_command != UINT32_MAX &&
+                cap                        == GL_BLEND)
+            {
+                m_ao_command_range_vec.push_back(std::array<uint32_t, 2>{n_ao_segment_start_command, n_command});
+
+                n_ao_segment_start_command = UINT32_MAX;
+            }
+        }
+
+        if (command_ptr->api_func == APIInterceptor::APIFunction::APIFUNCTION_GL_GLORTHO)
+        {
+            const auto left   = static_cast<uint32_t>(command_ptr->api_arg_vec.at(0).get_fp64() );
+            const auto right  = static_cast<uint32_t>(command_ptr->api_arg_vec.at(1).get_fp64() );
+            const auto bottom = static_cast<uint32_t>(command_ptr->api_arg_vec.at(2).get_fp64() );
+            const auto top    = static_cast<uint32_t>(command_ptr->api_arg_vec.at(3).get_fp64() );
+
+            if (left   == 0                       &&
+                top    == 0                       &&
+                right  == q1_window_extents.at(0) &&
+                bottom == q1_window_extents.at(1) )
+            {
+                m_n_screen_space_geom_api_first_command = n_command;
+                m_n_screen_space_geom_api_last_command  = n_commands - 1;
+
+                break;
             }
         }
     }
@@ -324,10 +363,32 @@ void ReplayerSnapshotPlayer::play_snapshot()
         {
             const auto api_command_ptr = m_snapshot_ptr->get_api_command_ptr(n_api_command);
 
+            /* Skip playback of commands that have been disabled */
             if (command_enabled_bool_ptr[n_api_command] == false)
             {
-                /* Skip playback of commands that have been disabled */
                 continue;
+            }
+
+            /* If requested, skip playback of commands responsible for applying lightmaps */
+            if (m_ui_settings_ptr->should_disable_lightmaps() )
+            {
+                bool should_skip_command = false;
+
+                for (const auto& current_range : m_ao_command_range_vec)
+                {
+                    if (n_api_command >= current_range.at(0) &&
+                        n_api_command <= current_range.at(1) )
+                    {
+                        should_skip_command = true;;
+
+                        break;
+                    }
+                }
+
+                if (should_skip_command)
+                {
+                    continue;
+                }
             }
 
             if (!m_ui_settings_ptr->should_draw_screenspace_geometry() )

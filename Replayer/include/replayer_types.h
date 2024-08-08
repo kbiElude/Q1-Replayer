@@ -79,6 +79,7 @@ public:
         /* Stub */
     }
 
+    virtual bool should_disable_lightmaps        () const = 0;
     virtual bool should_draw_screenspace_geometry() const = 0;
 };
 

@@ -22,6 +22,7 @@ static void glfw_error_callback(int         error,
 
 ReplayerAPICallWindow::ReplayerAPICallWindow(Replayer* in_replayer_ptr)
     :m_replayer_ptr                    (in_replayer_ptr),
+     m_should_disable_lightmaps        (false),
      m_should_draw_screenspace_geometry(true),
      m_snapshot_ptr                    (nullptr),
      m_window_ptr                      (nullptr),
@@ -188,6 +189,12 @@ void ReplayerAPICallWindow::execute()
                             ImGui::EndListBox();
 
                             ImGui::NewLine ();
+
+                            if (ImGui::Checkbox("Disable lightmaps",
+                                                &m_should_disable_lightmaps) )
+                            {
+                                m_replayer_ptr->refresh_windows();
+                            }
 
                             if (ImGui::Checkbox("Draw screen-space geometry",
                                                 &m_should_draw_screenspace_geometry) )
