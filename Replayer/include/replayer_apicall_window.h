@@ -70,10 +70,10 @@ private:
     bool m_should_draw_weapon;
     bool m_should_shade_3d_models;
 
-    std::vector<std::string> m_api_command_vec;
-    std::mutex               m_mutex;
-    Replayer*                m_replayer_ptr;
-    ReplayerSnapshot*        m_snapshot_ptr;
+    std::vector<std::string>   m_api_command_vec;
+    std::mutex                 m_mutex;
+    Replayer*                  m_replayer_ptr;
+    ReplayerSnapshot*          m_snapshot_ptr;
 
     GLFWwindow*     m_window_ptr;
     std::thread     m_worker_thread;

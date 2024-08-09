@@ -34,7 +34,6 @@ const APIInterceptor::APICommand* ReplayerSnapshot::get_api_command_ptr(const ui
     return &m_api_command_vec.at(in_n_api_command);
 }
 
-
 void ReplayerSnapshot::record_api_call(const APIInterceptor::APIFunction&         in_api_func,
                                        const uint32_t&                            in_n_args,
                                        const APIInterceptor::APIFunctionArgument* in_args_ptr)

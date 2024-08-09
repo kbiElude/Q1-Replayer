@@ -166,6 +166,8 @@ void ReplayerAPICallWindow::execute()
                             ImGui::BeginListBox("##ListBox",
                                                 ImVec2(static_cast<float>(display_w - 10), static_cast<float>(api_call_listbox_height) ));
                             {
+                                std::lock_guard<std::mutex> lock2(m_mutex);
+
                                 bool       command_adjusted         = false;
                                 auto       command_enabled_bool_ptr = reinterpret_cast<bool*>(m_replayer_ptr->get_current_snapshot_command_enabled_bool_as_u8_vec_ptr()->data() );
                                 const auto n_api_commands           = static_cast<uint32_t>  (m_api_command_vec.size                                                 ()         );
@@ -174,9 +176,10 @@ void ReplayerAPICallWindow::execute()
                                               n_api_command < n_api_commands;
                                             ++n_api_command)
                                 {
-                                    bool status = command_enabled_bool_ptr[n_api_command];
+                                    auto label_ptr = m_api_command_vec.at    (n_api_command).c_str();
+                                    bool status    = command_enabled_bool_ptr[n_api_command];
 
-                                    command_adjusted |= ImGui::Selectable(m_api_command_vec.at(n_api_command).c_str(),
+                                    command_adjusted |= ImGui::Selectable(label_ptr,
                                                                          &status);
 
                                     if (status != command_enabled_bool_ptr[n_api_command])
@@ -260,7 +263,8 @@ end:
 
 void ReplayerAPICallWindow::load_snapshot(ReplayerSnapshot* in_snapshot_ptr)
 {
-    assert(in_snapshot_ptr != nullptr);
+    assert(m_mutex.try_lock() == false);
+    assert(in_snapshot_ptr    != nullptr);
 
     /* Cache the snapshot instance */
     m_snapshot_ptr = in_snapshot_ptr;
