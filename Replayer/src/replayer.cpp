@@ -178,6 +178,7 @@ void Replayer::on_snapshot_available() const
     {
         Replayer* this_ptr = const_cast<Replayer*>(this);
 
+        m_replayer_apicall_window_ptr->lock_for_snapshot_access ();
         m_replayer_snapshot_player_ptr->lock_for_snapshot_access();
         {
             /* NOTE: Since this function is likely called from within apllication's rendering thread, we need to remember
@@ -222,6 +223,7 @@ void Replayer::on_snapshot_available() const
             ++this_ptr->m_n_snapshot;
         }
         m_replayer_snapshot_player_ptr->unlock_for_snapshot_access();
+        m_replayer_apicall_window_ptr->unlock_for_snapshot_access ();
     }
 
     m_replayer_window_ptr->refresh();
