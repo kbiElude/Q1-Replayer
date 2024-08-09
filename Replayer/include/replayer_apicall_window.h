@@ -44,6 +44,11 @@ private:
         return m_should_draw_screenspace_geometry;
     }
 
+    bool should_draw_weapon() const final
+    {
+        return m_should_draw_weapon;
+    }
+
     /* Private funcs */
     ReplayerAPICallWindow(Replayer* in_replayer_ptr);
 
@@ -57,6 +62,7 @@ private:
 
     bool m_should_disable_lightmaps;
     bool m_should_draw_screenspace_geometry;
+    bool m_should_draw_weapon;
 
     std::vector<std::string> m_api_command_vec;
     std::mutex               m_mutex;

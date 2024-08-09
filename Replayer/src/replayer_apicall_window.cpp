@@ -24,6 +24,7 @@ ReplayerAPICallWindow::ReplayerAPICallWindow(Replayer* in_replayer_ptr)
     :m_replayer_ptr                    (in_replayer_ptr),
      m_should_disable_lightmaps        (false),
      m_should_draw_screenspace_geometry(true),
+     m_should_draw_weapon              (true),
      m_snapshot_ptr                    (nullptr),
      m_window_ptr                      (nullptr),
      m_worker_thread_must_die          (false)
@@ -198,6 +199,12 @@ void ReplayerAPICallWindow::execute()
 
                             if (ImGui::Checkbox("Draw screen-space geometry",
                                                 &m_should_draw_screenspace_geometry) )
+                            {
+                                m_replayer_ptr->refresh_windows();
+                            }
+
+                            if (ImGui::Checkbox("Draw weapon",
+                                                &m_should_draw_weapon) )
                             {
                                 m_replayer_ptr->refresh_windows();
                             }

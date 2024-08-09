@@ -49,8 +49,12 @@ private:
     const IUISettings* m_ui_settings_ptr;
 
     std::vector<std::array<uint32_t, 2> > m_ao_command_range_vec;
-    uint32_t                              m_n_screen_space_geom_api_first_command;
-    uint32_t                              m_n_screen_space_geom_api_last_command;
+    std::vector<std::array<uint32_t, 2> > m_shade_model_command_range_vec;
+
+    uint32_t m_n_screen_space_geom_api_first_command;
+    uint32_t m_n_screen_space_geom_api_last_command;
+    uint32_t m_n_weapon_draw_first_command;
+    uint32_t m_n_weapon_draw_last_command;
 
     const GLIDToTexturePropsMap* m_snapshot_gl_id_to_texture_props_map_ptr;
     const ReplayerSnapshot*      m_snapshot_ptr;

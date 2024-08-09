@@ -20,6 +20,8 @@ ReplayerSnapshotPlayer::ReplayerSnapshotPlayer(const Replayer*    in_replayer_pt
     :m_replayer_ptr                           (in_replayer_ptr),
      m_n_screen_space_geom_api_first_command  (UINT32_MAX),
      m_n_screen_space_geom_api_last_command   (UINT32_MAX),
+     m_n_weapon_draw_first_command            (UINT32_MAX),
+     m_n_weapon_draw_last_command             (UINT32_MAX),
      m_snapshot_gl_id_to_texture_props_map_ptr(nullptr),
      m_snapshot_initialized                   (false),
      m_snapshot_ptr                           (nullptr),
@@ -41,9 +43,16 @@ void ReplayerSnapshotPlayer::analyze_snapshot()
     const auto n_commands        = m_snapshot_ptr->get_n_api_commands   ();
     const auto q1_window_extents = m_replayer_ptr->get_q1_window_extents();
  
-    uint32_t n_ao_segment_start_command = UINT32_MAX;
+    bool     is_blending_enabled                 = false;
+    bool     is_modulate_env_mode_enabled        = false;
+    uint32_t n_ao_segment_start_command          = UINT32_MAX;
+    uint32_t n_weapon_draw_segment_start_command = UINT32_MAX;
 
-    m_ao_command_range_vec.clear();
+    std::vector<std::array<uint32_t, 2> > draws_with_env_mode_modulate_command_range_vec;
+    std::vector<std::array<uint32_t, 2> > env_mode_modulate_command_range_vec;
+
+    m_ao_command_range_vec.clear         ();
+    m_shade_model_command_range_vec.clear();
 
     for (uint32_t n_command = 0;
                   n_command < n_commands;
@@ -51,12 +60,81 @@ void ReplayerSnapshotPlayer::analyze_snapshot()
     {
         const auto command_ptr = m_snapshot_ptr->get_api_command_ptr(n_command);
 
+        // All models are "AO-shaded" exclusively by rendering the geometry in question with ENV_MODE set to GL_MODULATE
+        // and with blending disabled.
+        //
+        // Particles are also shaded this method, the excpetion being blending is enabled in this case and there is no
+        // "pre-pass".
+        //
+        // To determine the range used to render the weapon, we:
+        //
+        // 1) Collect snapshot ranges when ENV_MODE is set to GL_MODULATE.
+        // 2) Collect snapshot ranges of glBegin()/glEnd() calls when blending is disabled.
+        //
+        // All draw calls generated while ENV_MODE is set to GL_MODULATE for the last time are used to draw the weapon.
+        //
+        // To determine draw calls used to shade monsters and other 3D models, we simply look at the remaining snapshot ranges.
+        if (command_ptr->api_func == APIInterceptor::APIFunction::APIFUNCTION_GL_GLTEXENVF)
+        {
+            const auto mode = static_cast<uint32_t>(command_ptr->api_arg_vec.at(2).get_fp32() );
+
+            if (mode == GL_MODULATE)
+            {
+                if (env_mode_modulate_command_range_vec.size()       == 0          ||
+                    env_mode_modulate_command_range_vec.back().at(1) != UINT32_MAX)
+                {
+                    env_mode_modulate_command_range_vec.push_back(std::array<uint32_t, 2>{n_command, UINT32_MAX});
+                }
+            }
+            else
+            {
+                if (env_mode_modulate_command_range_vec.size()       >  0 &&
+                    env_mode_modulate_command_range_vec.back().at(1) == UINT32_MAX)
+                {
+                    env_mode_modulate_command_range_vec.back().at(1) = n_command - 1;
+                }
+            }
+
+            if (is_blending_enabled == false &&
+                mode                == GL_MODULATE)
+            {
+                assert(n_weapon_draw_segment_start_command == UINT32_MAX);
+
+                is_modulate_env_mode_enabled = true;
+            }
+            else
+            {
+                is_modulate_env_mode_enabled = false;
+            }
+        }
+
+        if (is_modulate_env_mode_enabled == true)
+        {
+            if (command_ptr->api_func == APIInterceptor::APIFunction::APIFUNCTION_GL_GLBEGIN)
+            {
+                assert(n_weapon_draw_segment_start_command == UINT32_MAX);
+
+                n_weapon_draw_segment_start_command = n_command;
+            }
+            else
+            if (command_ptr->api_func == APIInterceptor::APIFunction::APIFUNCTION_GL_GLEND)
+            {
+                assert(n_weapon_draw_segment_start_command != UINT32_MAX);
+
+                draws_with_env_mode_modulate_command_range_vec.emplace_back(
+                    std::array<uint32_t, 2>{n_weapon_draw_segment_start_command,
+                                            n_command}
+                );
+
+                n_weapon_draw_segment_start_command = UINT32_MAX;
+            }
+        }
+
         if (command_ptr->api_func == APIInterceptor::APIFunction::APIFUNCTION_GL_GLBLENDFUNC)
         {
-            // Q1 appears to first render diffuse-only textures first, and then follow up with AO
-            // achieved by re-rendering the geometry rendered in the earlier pass(es) with a different
-            // AO texture enabled + special blending settings applied. This can be done multiple times
-            // in a single frame.
+            // For scene geometry, Q1 appears to first render diffuse-only textures first, and then follow up with AO
+            // achieved by re-rendering the geometry rendered in the earlier pass(es) with a lightmap texture enabled +
+            // special blending settings applied. This can be done multiple times in a single frame.
             //
             // This segment ends with the first glDisable(GL_BLEND) call encountered.
             auto       next_command_ptr = m_snapshot_ptr->get_api_command_ptr(n_command + 1);
@@ -82,12 +160,28 @@ void ReplayerSnapshotPlayer::analyze_snapshot()
         {
             const auto cap = command_ptr->api_arg_vec.at(0).get_u32();
 
+            if (cap == GL_BLEND)
+            {
+                is_blending_enabled = false;
+            }
+
             if (n_ao_segment_start_command != UINT32_MAX &&
                 cap                        == GL_BLEND)
             {
-                m_ao_command_range_vec.push_back(std::array<uint32_t, 2>{n_ao_segment_start_command, n_command});
+                m_ao_command_range_vec.push_back(std::array<uint32_t, 2>{n_ao_segment_start_command,
+                                                                         n_command});
 
                 n_ao_segment_start_command = UINT32_MAX;
+            }
+        }
+        else
+        if (command_ptr->api_func == APIInterceptor::APIFunction::APIFUNCTION_GL_GLENABLE)
+        {
+            const auto cap = command_ptr->api_arg_vec.at(0).get_u32();
+
+            if (cap == GL_BLEND)
+            {
+                is_blending_enabled = true;
             }
         }
 
@@ -109,6 +203,38 @@ void ReplayerSnapshotPlayer::analyze_snapshot()
                 break;
             }
         }
+    }
+
+    if (env_mode_modulate_command_range_vec.size() > 0)
+    {
+        env_mode_modulate_command_range_vec.erase(env_mode_modulate_command_range_vec.begin(),
+                                                  env_mode_modulate_command_range_vec.begin() + (env_mode_modulate_command_range_vec.size() - 1) );
+    }
+
+    if (env_mode_modulate_command_range_vec.size() != 0)
+    {
+        assert(env_mode_modulate_command_range_vec.size() == 1);
+
+        const auto n_env_mode_modulate_start_command = env_mode_modulate_command_range_vec.at(0).at(0);
+        uint32_t   n_first_weapon_draw_command_range = 0;
+
+        do
+        {
+            const auto& current_range = draws_with_env_mode_modulate_command_range_vec.at(n_first_weapon_draw_command_range);
+
+            if (current_range.at(0) < n_env_mode_modulate_start_command)
+            {
+                n_first_weapon_draw_command_range ++;
+            }
+            else
+            {
+                break;
+            }
+        }
+        while (true);
+
+        m_n_weapon_draw_first_command = draws_with_env_mode_modulate_command_range_vec.at(n_first_weapon_draw_command_range).at(0);
+        m_n_weapon_draw_last_command  = env_mode_modulate_command_range_vec.at           (0).at                                (1);
     }
 }
 
@@ -383,6 +509,23 @@ void ReplayerSnapshotPlayer::play_snapshot()
 
                         break;
                     }
+                }
+
+                if (should_skip_command)
+                {
+                    continue;
+                }
+            }
+
+            /* Ditto for weapon draws. */
+            if (!m_ui_settings_ptr->should_draw_weapon() )
+            {
+                bool should_skip_command = false;
+
+                if (n_api_command >= m_n_weapon_draw_first_command &&
+                    n_api_command <= m_n_weapon_draw_last_command)
+                {
+                    should_skip_command = true;
                 }
 
                 if (should_skip_command)
