@@ -25,6 +25,7 @@ ReplayerAPICallWindow::ReplayerAPICallWindow(Replayer* in_replayer_ptr)
      m_should_disable_lightmaps        (false),
      m_should_draw_screenspace_geometry(true),
      m_should_draw_weapon              (true),
+     m_should_shade_3d_models          (true),
      m_snapshot_ptr                    (nullptr),
      m_window_ptr                      (nullptr),
      m_worker_thread_must_die          (false)
@@ -150,6 +151,8 @@ void ReplayerAPICallWindow::execute()
                                      nullptr,
                                      ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize);
                         {
+                            bool needs_window_refresh = false;
+
                             if (ImGui::BeginMenuBar() )
                             {
                                 ImGui::TextUnformatted("API calls");
@@ -160,7 +163,7 @@ void ReplayerAPICallWindow::execute()
                             ImGui::SetWindowSize(ImVec2(static_cast<float>(m_window_extents.at(0) ),
                                                         static_cast<float>(m_window_extents.at(1) )));
 
-                            ImGui::BeginListBox("##",
+                            ImGui::BeginListBox("##ListBox",
                                                 ImVec2(static_cast<float>(display_w - 10), static_cast<float>(api_call_listbox_height) ));
                             {
                                 bool       command_adjusted         = false;
@@ -194,17 +197,28 @@ void ReplayerAPICallWindow::execute()
                             if (ImGui::Checkbox("Disable lightmaps",
                                                 &m_should_disable_lightmaps) )
                             {
-                                m_replayer_ptr->refresh_windows();
+                                needs_window_refresh = true;
                             }
 
                             if (ImGui::Checkbox("Draw screen-space geometry",
                                                 &m_should_draw_screenspace_geometry) )
                             {
-                                m_replayer_ptr->refresh_windows();
+                                needs_window_refresh = true;
                             }
 
                             if (ImGui::Checkbox("Draw weapon",
                                                 &m_should_draw_weapon) )
+                            {
+                                needs_window_refresh = true;
+                            }
+
+                            if (ImGui::Checkbox("Shade 3D models",
+                                                &m_should_shade_3d_models) )
+                            {
+                                needs_window_refresh = true;
+                            }
+
+                            if (needs_window_refresh)
                             {
                                 m_replayer_ptr->refresh_windows();
                             }

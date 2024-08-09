@@ -207,34 +207,48 @@ void ReplayerSnapshotPlayer::analyze_snapshot()
 
     if (env_mode_modulate_command_range_vec.size() > 0)
     {
-        env_mode_modulate_command_range_vec.erase(env_mode_modulate_command_range_vec.begin(),
-                                                  env_mode_modulate_command_range_vec.begin() + (env_mode_modulate_command_range_vec.size() - 1) );
-    }
-
-    if (env_mode_modulate_command_range_vec.size() != 0)
-    {
-        assert(env_mode_modulate_command_range_vec.size() == 1);
-
-        const auto n_env_mode_modulate_start_command = env_mode_modulate_command_range_vec.at(0).at(0);
-        uint32_t   n_first_weapon_draw_command_range = 0;
-
-        do
+        // Identify API call ranges used to shade 3D models.
         {
-            const auto& current_range = draws_with_env_mode_modulate_command_range_vec.at(n_first_weapon_draw_command_range);
+            const auto n_last_valid_command_api = env_mode_modulate_command_range_vec.back().at(0) - 1;
 
-            if (current_range.at(0) < n_env_mode_modulate_start_command)
+            m_shade_model_command_range_vec.reserve(draws_with_env_mode_modulate_command_range_vec.size() );
+
+            for (const auto& current_draw_api_command_range : draws_with_env_mode_modulate_command_range_vec)
             {
-                n_first_weapon_draw_command_range ++;
-            }
-            else
-            {
-                break;
+                if (current_draw_api_command_range.at(1) <= n_last_valid_command_api)
+                {
+                    m_shade_model_command_range_vec.emplace_back(current_draw_api_command_range);
+                }
+                else
+                {
+                    break;
+                }
             }
         }
-        while (true);
 
-        m_n_weapon_draw_first_command = draws_with_env_mode_modulate_command_range_vec.at(n_first_weapon_draw_command_range).at(0);
-        m_n_weapon_draw_last_command  = env_mode_modulate_command_range_vec.at           (0).at                                (1);
+        // Identify API call range used to draw the weapon.
+        {
+            const auto n_env_mode_modulate_start_command = env_mode_modulate_command_range_vec.back().at(0);
+            uint32_t   n_first_weapon_draw_command_range = 0;
+
+            do
+            {
+                const auto& current_range = draws_with_env_mode_modulate_command_range_vec.at(n_first_weapon_draw_command_range);
+
+                if (current_range.at(0) < n_env_mode_modulate_start_command)
+                {
+                    n_first_weapon_draw_command_range ++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            while (true);
+
+            m_n_weapon_draw_first_command = draws_with_env_mode_modulate_command_range_vec.at(n_first_weapon_draw_command_range).at(0);
+            m_n_weapon_draw_last_command  = env_mode_modulate_command_range_vec.back         ().at                                 (1);
+        }
     }
 }
 
@@ -534,6 +548,7 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 }
             }
 
+            /* What about screen-space geometry like console and status bar? */
             if (!m_ui_settings_ptr->should_draw_screenspace_geometry() )
             {
                 /* Skip playback of commands responsible for rendering screen-space geom */
@@ -541,6 +556,22 @@ void ReplayerSnapshotPlayer::play_snapshot()
                     n_api_command <= m_n_screen_space_geom_api_last_command)
                 {
                     continue;
+                }
+            }
+
+            // Should we shade 3D models?
+            if (!m_ui_settings_ptr->should_shade_3d_models() )
+            {
+                for (const auto& current_range : m_shade_model_command_range_vec)
+                {
+                    if (n_api_command == current_range.at(0) )
+                    {
+                        reinterpret_cast<PFNGLTEXENVFPROC>(OpenGL::g_cached_gl_tex_env_f)(GL_TEXTURE_ENV,
+                                                                                          GL_TEXTURE_ENV_MODE,
+                                                                                          GL_REPLACE);
+
+                        break;
+                    }
                 }
             }
 
@@ -809,9 +840,11 @@ void ReplayerSnapshotPlayer::play_snapshot()
 
                 case APIInterceptor::APIFUNCTION_GL_GLTEXENVF:
                 {
+                    auto arg_param = api_command_ptr->api_arg_vec.at(2).get_fp32();
+
                     reinterpret_cast<PFNGLTEXENVFPROC>(OpenGL::g_cached_gl_tex_env_f)(api_command_ptr->api_arg_vec.at(0).get_u32 (),
                                                                                       api_command_ptr->api_arg_vec.at(1).get_u32 (),
-                                                                                      api_command_ptr->api_arg_vec.at(2).get_fp32() );
+                                                                                      arg_param);
 
                     break;
                 }

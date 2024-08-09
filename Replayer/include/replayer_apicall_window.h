@@ -49,6 +49,11 @@ private:
         return m_should_draw_weapon;
     }
 
+    bool should_shade_3d_models() const final
+    {
+        return m_should_shade_3d_models;
+    }
+
     /* Private funcs */
     ReplayerAPICallWindow(Replayer* in_replayer_ptr);
 
@@ -63,6 +68,7 @@ private:
     bool m_should_disable_lightmaps;
     bool m_should_draw_screenspace_geometry;
     bool m_should_draw_weapon;
+    bool m_should_shade_3d_models;
 
     std::vector<std::string> m_api_command_vec;
     std::mutex               m_mutex;
