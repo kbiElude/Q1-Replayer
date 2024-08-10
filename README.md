@@ -1,7 +1,13 @@
-# Q1-Replayer
+    # Q1-Replayer
 A tool to capture &amp; analyze GLQuake rendering pipeline.
 
 ![The tool in its full glory](https://github.com/kbiElude/Q1-Replayer/blob/main/docs/screenshot.png?raw=true)
+
+This tool could not have been created without existence of the following projects:
+
+- APIInterceptor by Dominik Witczak (hey that's me)
+- GLFW by Marcus Geelnard and Camilla Löwy
+- ImgUI by Omar Cornut
 
 # How do I build the tool?
 The easy way is to grab build.zip, extract it to any directory you wish and just run it.
