@@ -2,6 +2,10 @@
  *
  * This code is licensed under MIT license (see LICENSE.txt for details)
  */
+
+// Shoo shoo VS warnings, this is a hobby project.
+#define _CRT_SECURE_NO_WARNINGS
+
 #include "replayer_snapshot_logger.h"
 #include "Common/utils.h"
 #include "OpenGL/utils_enum.h"
