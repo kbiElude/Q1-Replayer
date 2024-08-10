@@ -241,7 +241,7 @@ void ReplayerAPICallWindow::execute()
                     {
                         ImGui::Begin("Hello.", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar);
                         {
-                            ImGui::Text("Press F11 to capture a frame..");
+                            ImGui::Text("Press F7 to capture a frame..");
                         }
                         ImGui::End();
 

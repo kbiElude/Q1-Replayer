@@ -26,7 +26,7 @@ LRESULT CALLBACK on_keyboard_event(int    code,
 {
     if (code >= 0)
     {
-        if (wParam == VK_F11)
+        if (wParam == VK_F7)
         {
             /* Only react when the key is being released */
             if (lParam & (1 << 31) )

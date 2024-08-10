@@ -22,7 +22,7 @@ You need the executable to be 32-bit because, well, that's what was the only x86
 # How do I use the tool?
 1. Install Quake 1. Steam distribution is recommended since it comes with GLQuake attached.
 2. Run Launcher.exe. Point the tool to the directory where GLQuake.exe lives.
-3. Once the game starts, capture a frame using F11. No worries, you can do this as many times as you please while the game executes.
+3. Once the game starts, capture a frame using F7. No worries, you can do this as many times as you please while the game executes.
 4. Whenever you capture a frame, the API call window seen on the right will fill with a list of API calls required to render the frame. On the bottom, you can see a replay of the snapshot.
 
 # But why?
