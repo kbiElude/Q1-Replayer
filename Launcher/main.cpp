@@ -42,6 +42,32 @@ int main()
                                              open_file_name_descriptor.nFileOffset);
     }
 
+    /* Add a check to ensure we're running a supported GLQuake executable. */
+    {
+        WIN32_FILE_ATTRIBUTE_DATA file_attrib_data = {};
+
+        if (::GetFileAttributesExW(glquake_exe_file_name.c_str(),
+                                   GetFileExInfoStandard,
+                                  &file_attrib_data) != 0)
+        {
+            if ( (file_attrib_data.nFileSizeLow != 504832) && //glquake 0.98 alpha
+                 (file_attrib_data.nFileSizeLow != 423936) )  //glquake 0.95
+            {
+                ::MessageBoxA(HWND_DESKTOP,
+                              "Your GLQuake executable uses an unrecognized version. Only 0.98 Alpha and 0.95 are confirmed to work correctly.",
+                              "Warning",
+                              MB_OK | MB_ICONWARNING);
+            }
+        }
+        else
+        {
+            ::MessageBoxA(HWND_DESKTOP,
+                          "Could not query file attributes of your GLQuake executable. Compatibility check could not be executed.",
+                          "Warning",
+                          MB_OK | MB_ICONWARNING);
+        }
+    }
+
     /* Append args required for the tool to work as expected with glquake. */
     glquake_exe_file_name += std::wstring(L" -window -fullsbar");
 
