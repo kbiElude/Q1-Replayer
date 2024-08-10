@@ -18,6 +18,7 @@
 ReplayerSnapshotPlayer::ReplayerSnapshotPlayer(const Replayer*    in_replayer_ptr,
                                                const IUISettings* in_ui_settings_ptr)
     :m_replayer_ptr                           (in_replayer_ptr),
+     m_n_first_glrotate_command               (UINT32_MAX),
      m_n_screen_space_geom_api_first_command  (UINT32_MAX),
      m_n_screen_space_geom_api_last_command   (UINT32_MAX),
      m_n_weapon_draw_first_command            (UINT32_MAX),
@@ -53,6 +54,8 @@ void ReplayerSnapshotPlayer::analyze_snapshot()
 
     m_ao_command_range_vec.clear         ();
     m_shade_model_command_range_vec.clear();
+
+    m_n_first_glrotate_command = UINT32_MAX;
 
     for (uint32_t n_command = 0;
                   n_command < n_commands;
@@ -202,6 +205,12 @@ void ReplayerSnapshotPlayer::analyze_snapshot()
 
                 break;
             }
+        }
+
+        if (command_ptr->api_func      == APIInterceptor::APIFunction::APIFUNCTION_GL_GLROTATEF &&
+            m_n_first_glrotate_command == UINT32_MAX)
+        {
+            m_n_first_glrotate_command = n_command;
         }
     }
 
@@ -575,6 +584,14 @@ void ReplayerSnapshotPlayer::play_snapshot()
                 }
             }
 
+            /* Translate the eye as specified in the UI */
+            if (n_api_command == m_n_first_glrotate_command)
+            {
+                reinterpret_cast<PFNGLTRANSLATEFPROC>(OpenGL::g_cached_gl_translate_f)(m_ui_settings_ptr->get_eye_translation_x_offset(),
+                                                                                       0.0f,
+                                                                                       0.0f);
+            }
+
             switch (api_command_ptr->api_func)
             {
                 case APIInterceptor::APIFUNCTION_GL_GLALPHAFUNC:
@@ -878,6 +895,7 @@ void ReplayerSnapshotPlayer::play_snapshot()
                     reinterpret_cast<PFNGLTRANSLATEFPROC>(OpenGL::g_cached_gl_translate_f)(api_command_ptr->api_arg_vec.at(0).get_fp32(),
                                                                                            api_command_ptr->api_arg_vec.at(1).get_fp32(),
                                                                                            api_command_ptr->api_arg_vec.at(2).get_fp32() );
+
 
                     break;
                 }

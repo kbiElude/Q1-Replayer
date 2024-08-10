@@ -51,6 +51,7 @@ private:
     std::vector<std::array<uint32_t, 2> > m_ao_command_range_vec;
     std::vector<std::array<uint32_t, 2> > m_shade_model_command_range_vec;
 
+    uint32_t m_n_first_glrotate_command;
     uint32_t m_n_screen_space_geom_api_first_command;
     uint32_t m_n_screen_space_geom_api_last_command;
     uint32_t m_n_weapon_draw_first_command;

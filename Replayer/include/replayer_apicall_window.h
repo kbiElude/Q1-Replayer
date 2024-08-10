@@ -34,6 +34,11 @@ public:
 
 private:
     /* IUISettings funcs */
+    float get_eye_translation_x_offset() const final
+    {
+        return m_eye_translation;
+    }
+
     bool should_disable_lightmaps() const final
     {
         return m_should_disable_lightmaps;
@@ -65,10 +70,11 @@ private:
     std::array<uint32_t, 2> m_window_extents;
     std::array<uint32_t, 2> m_window_x1y1;
 
-    bool m_should_disable_lightmaps;
-    bool m_should_draw_screenspace_geometry;
-    bool m_should_draw_weapon;
-    bool m_should_shade_3d_models;
+    float m_eye_translation;
+    bool  m_should_disable_lightmaps;
+    bool  m_should_draw_screenspace_geometry;
+    bool  m_should_draw_weapon;
+    bool  m_should_shade_3d_models;
 
     std::vector<std::string>   m_api_command_vec;
     std::mutex                 m_mutex;

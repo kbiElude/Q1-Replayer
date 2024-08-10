@@ -21,7 +21,8 @@ static void glfw_error_callback(int         error,
 }
 
 ReplayerAPICallWindow::ReplayerAPICallWindow(Replayer* in_replayer_ptr)
-    :m_replayer_ptr                    (in_replayer_ptr),
+    :m_eye_translation                 (0.0f),
+     m_replayer_ptr                    (in_replayer_ptr),
      m_should_disable_lightmaps        (false),
      m_should_draw_screenspace_geometry(true),
      m_should_draw_weapon              (true),
@@ -217,6 +218,14 @@ void ReplayerAPICallWindow::execute()
 
                             if (ImGui::Checkbox("Shade 3D models",
                                                 &m_should_shade_3d_models) )
+                            {
+                                needs_window_refresh = true;
+                            }
+
+                            if (ImGui::SliderFloat("Shift eye over X",
+                                                  &m_eye_translation,
+                                                  -2.0f,   /* v_min */
+                                                   2.0f) ) /* v_max */
                             {
                                 needs_window_refresh = true;
                             }
