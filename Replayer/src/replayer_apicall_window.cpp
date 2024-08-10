@@ -216,16 +216,16 @@ void ReplayerAPICallWindow::execute()
                                 needs_window_refresh = true;
                             }
 
-                            if (ImGui::Checkbox("Shade 3D models",
-                                                &m_should_shade_3d_models) )
+                            if (ImGui::SliderFloat("Eye translation",
+                                                  &m_eye_translation,
+                                                   -2.0f,   /* v_min */
+                                                    2.0f) ) /* v_max */
                             {
                                 needs_window_refresh = true;
                             }
 
-                            if (ImGui::SliderFloat("Shift eye over X",
-                                                  &m_eye_translation,
-                                                  -2.0f,   /* v_min */
-                                                   2.0f) ) /* v_max */
+                            if (ImGui::Checkbox("Shade 3D models",
+                                                &m_should_shade_3d_models) )
                             {
                                 needs_window_refresh = true;
                             }

@@ -257,8 +257,8 @@ void Replayer::reposition_windows()
     const auto q1_window_height       = q1_window_rect.bottom - q1_window_rect.top;
     const auto replayer_window_width  = q1_window_width;
     const auto replayer_window_height = q1_window_height;
-    const auto q1_window_x            = (desktop_width  - q1_window_width - APICALL_WINDOW_WIDTH) / 2;
-    const auto q1_window_y            = (desktop_height - replayer_window_height - q1_window_height)  / 2;
+    const auto q1_window_x            = (desktop_width  - q1_window_width        - APICALL_WINDOW_WIDTH) / 2;
+    const auto q1_window_y            = (desktop_height - replayer_window_height - q1_window_height)     / 2;
 
     {
         ::SetWindowPos(m_q1_hwnd,
@@ -290,7 +290,7 @@ void Replayer::reposition_windows()
             const std::array<uint32_t, 2> new_extents =
             {
                 APICALL_WINDOW_WIDTH,
-                static_cast<uint32_t>(q1_window_height + replayer_window_height),
+                static_cast<uint32_t>(q1_window_height + replayer_window_height - (caption_height + frame_height - 2 /* homework: find why we need magic here */)),
             };
 
             m_replayer_apicall_window_ptr->set_position(new_x1y1,
