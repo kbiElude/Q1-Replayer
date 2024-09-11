@@ -180,14 +180,14 @@ void ReplayerAPICallWindow::execute()
                                             ++n_api_command)
                                 {
                                     auto label_ptr = m_api_command_vec.at    (n_api_command).c_str();
-                                    bool status    = command_enabled_bool_ptr[n_api_command];
+                                    bool status    = command_enabled_bool_ptr[m_listed_api_command_to_n_api_command_map[n_api_command] ];
 
                                     command_adjusted |= ImGui::Selectable(label_ptr,
                                                                          &status);
 
-                                    if (status != command_enabled_bool_ptr[n_api_command])
+                                    if (status != command_enabled_bool_ptr[m_listed_api_command_to_n_api_command_map[n_api_command] ])
                                     {
-                                        command_enabled_bool_ptr[n_api_command] = status;
+                                        command_enabled_bool_ptr[m_listed_api_command_to_n_api_command_map[n_api_command] ] = status;
                                     }
                                 }
 
@@ -338,8 +338,9 @@ void ReplayerAPICallWindow::update_api_command_list_vec()
     std::string filler_string;
     std::string temp_string;
 
-    m_api_command_vec.clear ();
-    m_api_command_vec.reserve(n_api_commands);
+    m_api_command_vec.clear                        ();
+    m_api_command_vec.reserve                      (n_api_commands);
+    m_listed_api_command_to_n_api_command_map.clear();
 
     for (uint32_t n_api_command = 0;
                   n_api_command < n_api_commands;
@@ -377,6 +378,8 @@ void ReplayerAPICallWindow::update_api_command_list_vec()
 
         APIInterceptor::convert_api_command_to_string(*current_command_ptr,
                                                       &temp_string);
+
+        m_listed_api_command_to_n_api_command_map[m_api_command_vec.size()] = n_api_command;
 
         m_api_command_vec.emplace_back(filler_string + std::to_string(n_api_command) + ". " + temp_string);
     }
