@@ -83,6 +83,7 @@ public:
     virtual bool  should_disable_lightmaps        () const = 0;
     virtual bool  should_draw_screenspace_geometry() const = 0;
     virtual bool  should_draw_weapon              () const = 0;
+    virtual bool  should_hide_draw_calls          () const = 0;
     virtual bool  should_shade_3d_models          () const = 0;
 
 };

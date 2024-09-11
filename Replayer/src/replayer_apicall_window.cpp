@@ -26,6 +26,7 @@ ReplayerAPICallWindow::ReplayerAPICallWindow(Replayer* in_replayer_ptr)
      m_should_disable_lightmaps        (false),
      m_should_draw_screenspace_geometry(true),
      m_should_draw_weapon              (true),
+     m_should_hide_draw_calls          (false),
      m_should_shade_3d_models          (true),
      m_snapshot_ptr                    (nullptr),
      m_window_ptr                      (nullptr),
@@ -128,7 +129,8 @@ void ReplayerAPICallWindow::execute()
             glClear(GL_COLOR_BUFFER_BIT);
 
             {
-                std::lock_guard<std::mutex> lock(g_imgui_mutex);
+                std::lock_guard<std::mutex> lock                             (g_imgui_mutex);
+                bool                        needs_api_command_list_vec_update(false);
 
                 ImGui::SetCurrentContext(imgui_context_ptr);
 
@@ -152,7 +154,7 @@ void ReplayerAPICallWindow::execute()
                                      nullptr,
                                      ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize);
                         {
-                            bool needs_window_refresh = false;
+                            bool needs_window_refresh              = false;
 
                             if (ImGui::BeginMenuBar() )
                             {
@@ -204,6 +206,12 @@ void ReplayerAPICallWindow::execute()
                                 needs_window_refresh = true;
                             }
 
+                            if (ImGui::Checkbox("Do not list draw calls",
+                                                &m_should_hide_draw_calls) )
+                            {
+                                needs_api_command_list_vec_update = true;
+                            }
+
                             if (ImGui::Checkbox("Draw screen-space geometry",
                                                 &m_should_draw_screenspace_geometry) )
                             {
@@ -252,6 +260,11 @@ void ReplayerAPICallWindow::execute()
 
                 ImGui::Render                   ();
                 ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData() );
+
+                if (needs_api_command_list_vec_update)
+                {
+                    update_api_command_list_vec();
+                }
             }
         }
 
@@ -325,13 +338,30 @@ void ReplayerAPICallWindow::update_api_command_list_vec()
     std::string filler_string;
     std::string temp_string;
 
-    m_api_command_vec.resize(n_api_commands);
+    m_api_command_vec.clear ();
+    m_api_command_vec.reserve(n_api_commands);
 
     for (uint32_t n_api_command = 0;
                   n_api_command < n_api_commands;
                 ++n_api_command)
     {
-        if ( (n_api_command % 10) == 0)
+        const auto current_command_ptr = m_snapshot_ptr->get_api_command_ptr(n_api_command);
+
+        if (m_should_hide_draw_calls)
+        {
+            if ( (current_command_ptr->api_func == APIInterceptor::APIFUNCTION_GL_GLBEGIN)      ||
+                 (current_command_ptr->api_func == APIInterceptor::APIFUNCTION_GL_GLCOLOR3F)    ||
+                 (current_command_ptr->api_func == APIInterceptor::APIFUNCTION_GL_GLCOLOR4F)    ||
+                 (current_command_ptr->api_func == APIInterceptor::APIFUNCTION_GL_GLEND)        ||
+                 (current_command_ptr->api_func == APIInterceptor::APIFUNCTION_GL_GLTEXCOORD2F) ||
+                 (current_command_ptr->api_func == APIInterceptor::APIFUNCTION_GL_GLVERTEX2F)   ||
+                 (current_command_ptr->api_func == APIInterceptor::APIFUNCTION_GL_GLVERTEX3F)   ||
+                 (current_command_ptr->api_func == APIInterceptor::APIFUNCTION_GL_GLVERTEX4F)   )
+            {
+                continue;
+            }
+        }
+
         {
             const auto n_zero_digits_needed = n_digits_required - static_cast<uint32_t>(std::log10(n_api_command) );
 
@@ -345,9 +375,9 @@ void ReplayerAPICallWindow::update_api_command_list_vec()
             }
         }
 
-        APIInterceptor::convert_api_command_to_string(*m_snapshot_ptr->get_api_command_ptr(n_api_command),
+        APIInterceptor::convert_api_command_to_string(*current_command_ptr,
                                                       &temp_string);
 
-        m_api_command_vec.at(n_api_command) = filler_string + std::to_string(n_api_command) + ". " + temp_string;
+        m_api_command_vec.emplace_back(filler_string + std::to_string(n_api_command) + ". " + temp_string);
     }
 }
